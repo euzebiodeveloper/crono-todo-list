@@ -11,28 +11,29 @@ export default function Login() {
     setMessage(null)
     try {
       const res = await loginUser({ email, password })
-      if (res.token) {
-        setMessage('Login realizado com sucesso')
-        // salvar token (exemplo): localStorage.setItem('token', res.token)
-      } else if (res.error) {
-        setMessage(res.error)
-      } else {
-        setMessage('Resposta inesperada do servidor')
-      }
+      if (res.token) setMessage('Login realizado com sucesso')
+      else if (res.error) setMessage(res.error)
+      else setMessage('Resposta inesperada do servidor')
     } catch (err) {
       setMessage('Erro na requisição')
     }
   }
 
   return (
-    <div>
-      <h2>Login</h2>
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 320 }}>
-        <input type="email" placeholder="email@example.com" value={email} onChange={e => setEmail(e.target.value)} />
-        <input type="password" placeholder="senha" value={password} onChange={e => setPassword(e.target.value)} />
-        <button type="submit">Entrar</button>
-      </form>
-      {message && <p>{message}</p>}
+    <div className="section-bleed auth-section">
+      <div className="section-inner">
+        <h2>Entrar</h2>
+        <form onSubmit={handleSubmit} className="auth-form">
+          <label className="visually-hidden" htmlFor="email">Email</label>
+          <input id="email" type="email" placeholder="email@example.com" value={email} onChange={e => setEmail(e.target.value)} />
+
+          <label className="visually-hidden" htmlFor="password">Senha</label>
+          <input id="password" type="password" placeholder="senha" value={password} onChange={e => setPassword(e.target.value)} />
+
+          <button type="submit" className="btn">Entrar</button>
+        </form>
+        {message && <p className="message">{message}</p>}
+      </div>
     </div>
   )
 }
