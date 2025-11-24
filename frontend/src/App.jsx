@@ -1,42 +1,33 @@
-import React, { useEffect, useState } from 'react'
-import { fetchTodos, createTodo, toggleTodo, deleteTodo } from './api'
-import TodoList from './components/TodoList'
+import React from 'react'
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
+import Home from './pages/Home'
+import About from './pages/About'
+import Login from './pages/Login'
+import Register from './pages/Register'
 
 export default function App() {
-  const [todos, setTodos] = useState([])
-  const [title, setTitle] = useState('')
-
-  useEffect(() => {
-    fetchTodos().then(setTodos)
-  }, [])
-
-  async function handleAdd(e) {
-    e.preventDefault()
-    if (!title.trim()) return
-    const t = await createTodo({ title })
-    setTodos([t, ...todos])
-    setTitle('')
-  }
-
-  async function handleToggle(id) {
-    const updated = await toggleTodo(id)
-    setTodos(todos.map(t => t._id === id ? updated : t))
-  }
-
-  async function handleDelete(id) {
-    await deleteTodo(id)
-    setTodos(todos.filter(t => t._id !== id))
-  }
-
   return (
-    <div className="app">
-      <h1>Crono Todo List</h1>
-      <form onSubmit={handleAdd}>
-        <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Nova tarefa" />
-        <button type="submit">Adicionar</button>
-      </form>
+    <BrowserRouter>
+      <div className="app">
+        <header style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <h1 style={{ margin: 0 }}>Crono</h1>
+          <nav>
+            <Link to="/">Home</Link> |
+            <Link to="/about" style={{ marginLeft: 8 }}>About</Link> |
+            <Link to="/login" style={{ marginLeft: 8 }}>Login</Link> |
+            <Link to="/register" style={{ marginLeft: 8 }}>Register</Link>
+          </nav>
+        </header>
 
-      <TodoList todos={todos} onToggle={handleToggle} onDelete={handleDelete} />
-    </div>
+        <main style={{ marginTop: 20 }}>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+          </Routes>
+        </main>
+      </div>
+    </BrowserRouter>
   )
 }
