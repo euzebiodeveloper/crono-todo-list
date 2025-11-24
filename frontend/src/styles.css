@@ -306,6 +306,137 @@ input, button { font-size: 16px; }
 .how-it-works ol { padding-left: 18px; }
 .how-it-works li { margin-bottom: 8px; }
 
+/* Treasure-map style for How It Works */
+.how-it-works .steps { margin-top: 12px; }
+
+/* Treasure-map style for How It Works (centered cards, no zig-zag) */
+.how-it-works .steps-row {
+	display: grid;
+	grid-template-columns: 1fr;
+	row-gap: 56px;
+	justify-items: center;
+	padding-bottom: 12px;
+	position: relative;
+}
+.step-card {
+	background: linear-gradient(180deg,#fff8e6,#f3e5c9);
+	border-radius: 12px;
+	padding: 16px;
+	width: 220px; /* slightly narrower */
+	min-width: 200px;
+	min-height: 140px; /* reduced so short text won't force large height */
+	max-width: 42vw;
+	display: flex;
+	flex-direction: column; /* stack icon -> body -> number */
+	gap: 10px;
+	align-items: center;
+	text-align: center;
+	position: relative;
+	box-shadow: 0 8px 20px rgba(10,41,60,0.06);
+	transform: none; /* ensure no zig-zag offset */
+	z-index: 2; /* ensure cards sit above the dashed guide */
+}
+
+/* central vertical dashed guide line (desktop/tablet) */
+.steps-row::before {
+	content: '';
+	position: absolute;
+	left: 50%;
+	/* start a little below the top so the guide visually sits behind the cards */
+	top: 28px;
+	bottom: 0;
+	width: 2px;
+	/* shorter dashes and slightly lighter opacity for subtle appearance */
+	background-image: repeating-linear-gradient(to bottom, rgba(10,41,60,0.12) 0 6px, rgba(10,41,60,0) 6px 14px);
+	transform: translateX(-50%);
+	z-index: 0; /* keep the dashed guide behind cards */
+	pointer-events: none;
+}
+
+/* no horizontal connectors needed when cards sit on the center line */
+.steps-row .step-card::after { display: none !important; }
+.steps-row .step-card::before { display: none !important; }
+
+/* ensure the final 'step-end' circle is above the vertical line */
+.step-end { z-index: 4; }
+
+/* Tablet: reduce connector length and offset for narrower layouts */
+@media (max-width: 900px) {
+	.steps-row { --conn: 80px; --offset: 56px; --angle: 18deg; }
+}
+
+/* Mobile: hide connectors and show stacked cards (existing behavior) */
+@media (max-width: 700px) {
+	.how-it-works .steps-row { flex-direction: column; align-items: stretch; }
+	.step-card { width: 100%; transform: none !important; }
+	.step-card::after { display: none !important; }
+	.step-end { margin-left: 0; align-self: center; }
+	.steps-row .step-card { align-self: stretch !important; }
+}
+
+/* Mobile override: stack steps in a simple descending list (no zig-zag or dashed connectors) */
+@media (max-width: 700px) {
+	.how-it-works .steps-row { justify-items: stretch; row-gap: 20px; position: relative; padding-left: 0; }
+	.how-it-works .steps-row .step-card {
+		transform: none !important;
+		justify-self: stretch !important;
+		align-self: stretch !important;
+		width: 100%;
+		max-width: none;
+		min-width: 0;
+		/* replace dashed decorative border with a subtle solid border for mobile */
+		border: 1px solid rgba(10,41,60,0.06);
+		/* stacked layout: reserve a small left column for icons so the vertical line aligns */
+		display: grid;
+		grid-template-columns: 48px 1fr;
+		align-items: start;
+		gap: 12px;
+		text-align: left;
+		padding: 12px 16px;
+		position: relative;
+		z-index: 1;
+	}
+
+	/* vertical dashed line down the left/center gutter of the steps list */
+	.how-it-works .steps-row::before {
+		content: '';
+		position: absolute;
+		left: 24px;
+		top: 12px;
+		bottom: 12px;
+		width: 2px;
+		background-image: repeating-linear-gradient(to bottom, rgba(10,41,60,0.16) 0 8px, rgba(10,41,60,0) 8px 16px);
+		border-radius: 2px;
+		z-index: 2;
+		pointer-events: none;
+	}
+
+	.how-it-works .steps-row .step-card::after { display: none !important; }
+	.how-it-works .steps-row .step-card::before { display: none !important; }
+
+	/* align icon/number/X into the left column so they sit centered on the vertical line */
+	.how-it-works .steps-row .step-icon { grid-column: 1; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; margin: 0; z-index: 3; background: rgba(255,255,255,0.9); border-radius: 8px; }
+	.how-it-works .steps-row .step-number { grid-column: 1; justify-self: center; align-self: center; margin-top: 0; background: rgba(255,255,255,0.9); z-index: 3; }
+	.how-it-works .steps-row .step-end { grid-column: 1; justify-self: center; align-self: center; margin-left: 0; margin-top: 6px; z-index: 3; }
+}
+.steps-row .step-card:last-child::after,
+.steps-row .step-card:last-child::before { display: none; }
+.step-icon { font-size: 34px; width: 64px; height: 64px; display:flex; align-items:center; justify-content:center; background: rgba(10,41,60,0.04); border-radius: 12px; font-weight: 700; }
+.step-body { flex: 0 0 auto; }
+.step-title { font-weight: 800; font-size: 18px; margin-bottom: 6px; }
+.step-desc { font-size: 14px; color: var(--muted); }
+.step-number { font-weight: 700; color: rgba(10,41,60,0.6); padding: 6px 10px; border-radius: 8px; background: rgba(255,255,255,0.6); margin-top: auto; align-self: flex-end; }
+.step-end { width: 64px; height: 64px; display:flex; align-items:center; justify-content:center; background:#c0392b; color:#fff; border-radius:50%; font-size:28px; box-shadow: 0 8px 22px rgba(192,57,43,0.22); margin-left: 6px; flex: 0 0 auto; }
+.steps-note { margin-top: 8px; }
+
+@media (max-width: 700px) {
+	.how-it-works .steps-row { flex-direction: column; align-items: stretch; }
+	.step-card { width: 100%; }
+	.step-card::after { display: none; }
+	.step-end { margin-left: 0; align-self: center; }
+	.steps-row .step-card { align-self: stretch !important; }
+}
+
 /* author section */
 .author p { margin: 0 0 8px; }
 
@@ -327,6 +458,45 @@ input, button { font-size: 16px; }
 	.section-bleed { padding: 40px 0; }
 }
 
+/* Desktop: larger cards and typography for How It Works */
+@media (min-width: 900px) {
+	.how-it-works .steps-row { row-gap: 72px; }
+
+	.how-it-works .step-card {
+		width: 440px; /* ~2x the base 220px */
+		min-width: 400px;
+		max-width: none;
+		padding: 22px;
+		box-shadow: 0 12px 30px rgba(10,41,60,0.08);
+	}
+
+	.how-it-works .step-card .step-title { font-size: 28px; line-height: 1.05; }
+	.how-it-works .step-card .step-desc { font-size: 18px; color: var(--muted); }
+
+	.step-icon { font-size: 56px; width: 80px; height: 80px; border-radius: 12px; }
+	.step-number { font-size: 18px; padding: 8px 12px; }
+
+	.step-end { width: 80px; height: 80px; font-size: 36px; }
+}
+
+/* Desktop: scale up section titles ~4x and center-align them */
+@media (min-width: 900px) {
+	.hero-title { font-size: 28px; line-height: 1; }
+
+	/* feature headings and how-it-works step titles only */
+	.features h3,
+	.how-it-works .step-title {
+		font-size: 72px;
+		line-height: 1.02;
+		text-align: center;
+		margin-left: 0;
+		margin-right: 0;
+	}
+
+	/* ensure these headers remain above decorative overlays */
+	.features h3, .how-it-works .step-title { z-index: 3; position: relative; }
+}
+
 @media (max-width: 900px) {
 	.home-page .hero { grid-template-columns: 1fr; text-align: center; }
 	.cards { grid-template-columns: repeat(2,1fr); }
@@ -334,7 +504,7 @@ input, button { font-size: 16px; }
 
 @media (max-width: 480px) {
 	.cards { grid-template-columns: 1fr; }
-	.hero-title { font-size: 22px; }
+	.hero-title { font-size: 28px; }
 }
 
 @media (max-width: 480px) {

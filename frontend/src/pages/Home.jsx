@@ -44,13 +44,37 @@ export default function Home() {
 
       <section className="how-it-works">
         <h3>Como funciona</h3>
-        <ol>
-          <li><strong>Crie cartões</strong> para projetos ou áreas (ex.: Trabalho, Pessoal).</li>
-          <li><strong>Adicione atividades</strong> dentro dos cartões com data e hora marcada.</li>
-          <li><strong>Defina recorrência</strong> quando desejar que a atividade se repita.</li>
-          <li><strong>Aproximação do prazo</strong> torna o cartão mais vermelho e altera sua posição automaticamente.</li>
-        </ol>
-        <p className="muted">Prioridade entre cartões é calculada pelas atividades ativas: datas mais próximas recebem prioridade; em empate, ganha quem foi criado primeiro.</p>
+        {/* Treasure-map style steps */}
+        <div className="steps">
+          {(() => {
+            const steps = [
+              { id: 1, title: 'Crie cartões', desc: 'Crie cartões para projetos ou áreas (ex.: Trabalho, Pessoal).', icon: '🗂️' },
+              { id: 2, title: 'Adicione atividades', desc: 'Adicione atividades dentro dos cartões com data e hora marcada.', icon: '📝' },
+              { id: 3, title: 'Defina recorrência', desc: 'Defina recorrência quando desejar que a atividade se repita.', icon: '🔁' },
+              { id: 4, title: 'Aproximação do prazo', desc: 'Aproximação do prazo torna o cartão mais vermelho e altera sua posição automaticamente.', icon: '⏰' }
+            ]
+
+            return (
+              <>
+                <div className="steps-row">
+                  {steps.map((s, i) => (
+                    <div key={s.id} className="step-card">
+                      <div className="step-icon" aria-hidden>{s.icon}</div>
+                      <div className="step-body">
+                        <div className="step-title">{s.title}</div>
+                        <div className="step-desc muted">{s.desc}</div>
+                      </div>
+                      <div className="step-number">{i + 1}</div>
+                    </div>
+                  ))}
+
+                  <div className="step-end" title="Fim: X marca o tesouro">✖</div>
+                </div>
+                <p className="muted steps-note">Siga o mapa: cada cartão é um passo. O 'X' marca o objetivo final.</p>
+              </>
+            )
+          })()}
+        </div>
       </section>
 
       <section className="section-bleed section-examples">
