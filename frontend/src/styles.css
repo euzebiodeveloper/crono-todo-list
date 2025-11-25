@@ -4,6 +4,9 @@
 	--muted: #6b7b85;
 	--card: #ffffff;
 	--radius: 8px;
+	/* layout tokens for steps guide (used to center the vertical guide line) */
+	--step-card-padding-inline: 16px; /* horizontal padding inside .step-card */
+	--step-icon-size: 48px; /* default icon column width on mobile */
 }
 
 * { box-sizing: border-box; }
@@ -41,12 +44,20 @@ nav a:hover {
 	text-decoration: underline;
 }
 
+/* Make main full-bleed and remove card-like styling so it occupies 100% of viewport width */
 main {
-	margin-top: 20px;
-	background: linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,255,255,0.4));
-	padding: 20px;
-	border-radius: var(--radius);
-	box-shadow: 0 8px 24px rgba(10,41,60,0.06);
+	margin-top: 0;
+	/* full-bleed technique: expand to viewport width */
+	width: 100vw;
+	position: relative;
+	left: 50%;
+	right: 50%;
+	margin-left: -50vw;
+	margin-right: -50vw;
+	background: transparent !important;
+	padding: 20px 24px; /* keep reasonable inner spacing */
+	border-radius: 0 !important;
+	box-shadow: none !important;
 }
 
 form { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
@@ -123,6 +134,7 @@ li { padding: 6px 0; }
 	.logo-name { display: none; }
 	.logo-icon { display: block; height: 36px; }
 	main { padding: 12px; }
+	.how-it-works .steps-row { justify-items: stretch; row-gap: 36px; position: relative; padding-left: 0; }
 }
 
 /* Improve touch targets */
@@ -137,11 +149,18 @@ input, button { font-size: 16px; }
 }
 
 /* Hero */
-.home-page .hero-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: center; }
+.home-page .hero-inner { display: flex; flex-direction: column; gap: 20px; align-items: center; justify-content: center; width: 100%; }
 .hero-logo { width: 100%; max-width: 360px; display: block; margin: 0 auto; animation: fadeInUp 600ms ease both; }
-.hero-title { font-size: 28px; margin: 0 0 8px; color: var(--accent); }
-.hero-sub { margin: 0 0 16px; color: var(--muted); }
-.hero-ctas { display: flex; gap: 12px; }
+.hero-title { font-size: 28px; margin: 24px 0 8px; color: var(--accent); text-align: center; }
+.hero-sub {
+	margin: 0 auto 16px;
+	color: var(--muted);
+	text-align: center;
+	max-width: 640px; /* limit block width for better readability */
+	font-size: 16px;
+	line-height: 1.5;
+}
+.hero-ctas { display: flex; gap: 12px; justify-content: center; }
 
 .btn { display: inline-block; padding: 10px 16px; border-radius: 8px; background: var(--accent); color: #fff; text-decoration: none; font-weight: 600; transition: transform .12s ease, box-shadow .12s ease; }
 .btn:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(10,41,60,0.12); }
@@ -149,10 +168,40 @@ input, button { font-size: 16px; }
 
 /* Cards */
 .features { margin-top: 28px; }
-.features h3 { margin-bottom: 12px; }
-.cards { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
-.card { background: var(--card); border-radius: 10px; padding: 14px; box-shadow: 0 6px 18px rgba(10,41,60,0.04); animation: fadeInUp 540ms ease both; }
-.card h4 { margin: 0 0 8px; }
+.features h3, .section-features h3 {
+	margin: 16px 0 12px;
+	font-size: 28px; /* base size for small screens */
+	line-height: 1.05;
+	text-align: center;
+	font-weight: 700;
+}
+.cards {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 18px;
+	align-items: start;
+}
+.card {
+	background: linear-gradient(180deg, #ffffff, #fbfbfb);
+	border-radius: 16px;
+	padding: 20px;
+	box-shadow: 0 10px 30px rgba(10,41,60,0.06);
+	animation: fadeInUp 540ms ease both;
+	transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+	border: 1px solid rgba(10,41,60,0.04);
+}
+.card {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+}
+.card h4 { margin: 8px 0 10px; font-size: 20px; }
+.card p { margin: 0; font-size: 15px; color: var(--muted); line-height: 1.45; }
+
+.card:hover { transform: translateY(-6px); box-shadow: 0 20px 40px rgba(10,41,60,0.10); }
+.card-icon { font-size: 34px; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 12px; background: rgba(10,41,60,0.04); }
 
 /* example cards and urgency coloring */
 .example-cards { display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
@@ -306,6 +355,32 @@ input, button { font-size: 16px; }
 .how-it-works ol { padding-left: 18px; }
 .how-it-works li { margin-bottom: 8px; }
 
+/* Reusable section title style (used by 'Como funciona' and other section headers) */
+.how-it-works h3,
+.section-title {
+	max-width: 1100px;
+	text-align: left;     /* mantém o título alinhado à esquerda dentro do bloco */
+	padding: 0 24px;      /* garante espaçamento lateral em telas pequenas */
+	font-size: 28px;
+	line-height: 1.05;
+	font-weight: 700;
+	margin-bottom: 40px;
+	margin-top: 40px;
+}
+
+/* Make .home-page occupy full available width and remove card styling */
+.home-page {
+	width: 100%;
+	max-width: none;
+	background: transparent !important;
+	padding: 0 !important;
+	margin: 0 auto;
+	border-radius: 0 !important;
+	box-shadow: none !important;
+}
+
+.home-page .hero-inner { width: 100%; max-width: none; }
+
 /* Treasure-map style for How It Works */
 .how-it-works .steps { margin-top: 12px; }
 
@@ -394,20 +469,23 @@ input, button { font-size: 16px; }
 		text-align: left;
 		padding: 12px 16px;
 		position: relative;
-		z-index: 1;
+		z-index: 3; /* ensure cards sit above the guide on mobile */
 	}
 
-	/* vertical dashed line down the left/center gutter of the steps list */
+	/* vertical dashed line down the left gutter of the steps list (mobile)
+	   Use 50% and a fixed height so the guide is horizontally centered and
+	   vertically sized between components without complex calculations. */
 	.how-it-works .steps-row::before {
 		content: '';
 		position: absolute;
-		left: 24px;
-		top: 12px;
-		bottom: 12px;
+		left: 50%;
+		transform: translateX(-50%);
+		top: 20px; /* distance from top of the steps container */
+		height: calc(100% - 40px); /* vertical span between top and bottom */
 		width: 2px;
 		background-image: repeating-linear-gradient(to bottom, rgba(10,41,60,0.16) 0 8px, rgba(10,41,60,0) 8px 16px);
 		border-radius: 2px;
-		z-index: 2;
+		z-index: 1; /* keep the guide behind cards */
 		pointer-events: none;
 	}
 
@@ -423,11 +501,21 @@ input, button { font-size: 16px; }
 .steps-row .step-card:last-child::before { display: none; }
 .step-icon { font-size: 34px; width: 64px; height: 64px; display:flex; align-items:center; justify-content:center; background: rgba(10,41,60,0.04); border-radius: 12px; font-weight: 700; }
 .step-body { flex: 0 0 auto; }
-.step-title { font-weight: 800; font-size: 18px; margin-bottom: 6px; }
+.step-title { font-weight: 800; font-size: 20px; margin-bottom: 6px; text-align: left; line-height: 1.06; }
 .step-desc { font-size: 14px; color: var(--muted); }
 .step-number { font-weight: 700; color: rgba(10,41,60,0.6); padding: 6px 10px; border-radius: 8px; background: rgba(255,255,255,0.6); margin-top: auto; align-self: flex-end; }
 .step-end { width: 64px; height: 64px; display:flex; align-items:center; justify-content:center; background:#c0392b; color:#fff; border-radius:50%; font-size:28px; box-shadow: 0 8px 22px rgba(192,57,43,0.22); margin-left: 6px; flex: 0 0 auto; }
-.steps-note { margin-top: 8px; }
+.steps-note {
+	margin: 12px auto 0; /* center horizontally and add small top gap */
+	text-align: center;   /* center text under the 'X' */
+	max-width: 260px;     /* reduce block width so it sits neatly below the icon */
+	color: var(--muted);
+}
+
+@media (min-width: 900px) {
+	/* allow a slightly wider note on larger screens while keeping it centered */
+	.how-it-works .steps-note { max-width: 420px; }
+}
 
 @media (max-width: 700px) {
 	.how-it-works .steps-row { flex-direction: column; align-items: stretch; }
@@ -449,8 +537,25 @@ input, button { font-size: 16px; }
 .cards.column { display: flex; flex-direction: column; gap: 12px; }
 .cards.column .card { width: 100%; }
 
+/* When `.cards.column` is used inside the features section, render as a grid on desktop
+   so each card occupies one column (1/3 width). Keep stacked behavior on small screens. */
+.section-features .cards.column {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 18px;
+}
+.section-features .cards.column .card { width: auto; }
+
+@media (max-width: 900px) {
+	.section-features .cards.column { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 700px) {
+	.section-features .cards.column { grid-template-columns: 1fr; }
+}
+
 /* example list: each example-card becomes a full-width stacked section within the inner container */
-.example-list { display: flex; flex-direction: column; gap: 12px; }
+.example-list { display: flex; flex-direction: column; gap: 20px; }
 .example-card.full-width { width: 100%; }
 
 @media (min-width: 900px) {
@@ -483,11 +588,24 @@ input, button { font-size: 16px; }
 @media (min-width: 900px) {
 	.hero-title { font-size: 28px; line-height: 1; }
 
-	/* feature headings and how-it-works step titles only */
-	.features h3,
-	.how-it-works .step-title {
-		font-size: 72px;
+	/* feature heading: responsive sizing (clamped) */
+	.features h3, .section-features h3 {
+		/* responsive between a sensible min and max */
+		font-size: clamp(40px, 6vw, 30px);
 		line-height: 1.02;
+		text-align: center;
+		margin-left: 0;
+		margin-right: 0;
+		margin-top: 60px;
+		margin-bottom: 40px;
+	}
+
+	/* how-it-works step titles (responsive and readable) */
+	.how-it-works .step-title {
+		/* responsive sizing but constrained to reasonable values */
+		font-size: clamp(20px, 3.6vw, 36px);
+		line-height: 1.08;
+		/* keep titles centered to match card layout */
 		text-align: center;
 		margin-left: 0;
 		margin-right: 0;
@@ -499,7 +617,22 @@ input, button { font-size: 16px; }
 
 @media (max-width: 900px) {
 	.home-page .hero { grid-template-columns: 1fr; text-align: center; }
-	.cards { grid-template-columns: repeat(2,1fr); }
+	.cards { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 700px) {
+	.cards { grid-template-columns: 1fr; }
+	.card { padding: 16px; }
+	.card h4 { font-size: 18px; }
+	.card p { font-size: 14px; }
+	.card-icon { width: 48px; height: 48px; font-size: 28px; }
+}
+
+@media (min-width: 900px) {
+	.card { padding: 26px; }
+	.card h4 { font-size: 22px; }
+	.card p { font-size: 16px; }
+	.card-icon { width: 64px; height: 64px; font-size: 36px; }
 }
 
 @media (max-width: 480px) {

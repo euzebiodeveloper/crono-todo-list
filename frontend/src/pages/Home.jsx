@@ -21,7 +21,7 @@ export default function Home() {
 
       <section className="section-bleed section-features">
         <div className="section-inner">
-          <h3>O que você ganha</h3>
+          <h3>O que você ganha com o Crono</h3>
           <div className="cards column">
             <article className="card">
               <div className="card-icon">📈</div>
@@ -42,10 +42,11 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="how-it-works">
-        <h3>Como funciona</h3>
-        {/* Treasure-map style steps */}
-        <div className="steps">
+      <section className="section-bleed how-it-works">
+        <div className="section-inner">
+          <h3>Como funciona</h3>
+          {/* Treasure-map style steps */}
+          <div className="steps">
           {(() => {
             const steps = [
               { id: 1, title: 'Crie cartões', desc: 'Crie cartões para projetos ou áreas (ex.: Trabalho, Pessoal).', icon: '🗂️' },
@@ -70,16 +71,17 @@ export default function Home() {
 
                   <div className="step-end" title="Fim: X marca o tesouro">✖</div>
                 </div>
-                <p className="muted steps-note">Siga o mapa: cada cartão é um passo. O 'X' marca o objetivo final.</p>
+                <p className="muted steps-note">Você chegou no objetivo final — parabéns! Siga o mapa: cada cartão é um passo. O 'X' marca o objetivo final.</p>
               </>
             )
           })()}
+          </div>
         </div>
       </section>
 
       <section className="section-bleed section-examples">
         <div className="section-inner">
-          <h3>Seções de Cartões (exemplo)</h3>
+          <h3 className="section-title">Exemplos de Cartões</h3>
           <div className="example-list">
             {/** mock data and compact cards rendering */}
             {(() => {
@@ -190,7 +192,7 @@ export default function Home() {
             })()}
           </div>
 
-          <p className="muted">Cada seção acima ocupa 100% da largura visual e desce na página — ideal para leitura sequencial e foco por sessão. A cor indica urgência (verde → amarelo → vermelho) baseada na menor data dentro do cartão.</p>
+          <p className="muted">Pronto para começar? 🚀 Inspire-se com modelos práticos de cartões e organize suas tarefas em segundos. As cores indicam urgência — verde (baixa), amarelo (média) e vermelho (alta).</p>
         </div>
       </section>
 
