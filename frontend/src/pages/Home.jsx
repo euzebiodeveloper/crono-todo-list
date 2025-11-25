@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useRef, useState, useEffect } from 'react'
 
 export default function Home() {
   return (
@@ -18,6 +18,8 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      
 
       <section className="section-bleed section-features">
         <div className="section-inner">
@@ -39,6 +41,13 @@ export default function Home() {
               <p>Autenticação para manter suas listas e cartões seguros.</p>
             </article>
           </div>
+        </div>
+      </section>
+
+      <section className="section-bleed gallery-section">
+        <div className="section-inner">
+          <h3 className="section-title">Galeria</h3>
+          <GallerySlider />
         </div>
       </section>
 
@@ -149,56 +158,136 @@ export default function Home() {
                 return 'urgency-low'
               }
 
-              // compute earliest/latest and priority, then sort so high urgency (red) shows first
+              // compute earliest/latest and priority, then render example cards
               const prioritized = mock.map(card => {
                 const earliest = earliestDate(card.activities)
                 const latest = latestDate(card.activities)
-                // numeric priority: 3 = high (red), 2 = medium (yellow), 1 = low (green)
-                let prio = (() => {
-                  if (!earliest) return 1
-                  const now = new Date()
-                  const diff = (earliest - now) / (1000 * 60 * 60) // hours
-                  if (diff <= 24) return 3
-                  if (diff <= 72) return 2
-                  return 1
-                })()
-                // Example override: force card with id 'c1' to medium (yellow)
-                if (card.id === 'c1') prio = 2
-                return { card, earliest, latest, prio }
-              }).sort((a, b) => b.prio - a.prio)
+                const urgency = urgencyClass(earliest)
 
-              return prioritized.map(item => {
-                const { card, earliest, latest, prio } = item
-                // determine class from numeric priority so forced prio reflects visually
-                const cls = prio === 3 ? 'urgency-high' : prio === 2 ? 'urgency-medium' : 'urgency-low'
                 return (
-                  <div key={card.id} className={`example-card ${cls} full-width compact`}>
-                    <div className="ec-left">
-                      <div className="ec-title">{card.title}</div>
-                      <div className="ec-sub muted">{card.activities.length} atividades</div>
-                    </div>
-
-                    <div className="ec-right">
-                      <div className="ec-badge">
-                        <div className="ec-dates">
-                          <span className="ec-start"><strong>Início:</strong>&nbsp;<span className="date">{formatShort(earliest)}</span></span>
-                          <span className="ec-end"><strong>Fim:</strong>&nbsp;<span className="date">{formatShort(latest)}</span></span>
+                  <article key={card.id} className={`example-card ${urgency}`}>
+                        <h4>{card.title}</h4>
+                        <div className="example-meta">
+                          <div><strong>Início:</strong> {formatShort(earliest)}</div>
+                          <div><strong>Fim:</strong> {formatShort(latest)}</div>
                         </div>
-                      </div>
-                    </div>
-                  </div>
+                      </article>
                 )
               })
+
+              return prioritized
             })()}
           </div>
-
-          <p className="muted">Pronto para começar? 🚀 Inspire-se com modelos práticos de cartões e organize suas tarefas em segundos. As cores indicam urgência — verde (baixa), amarelo (média) e vermelho (alta).</p>
         </div>
       </section>
 
       <footer className="site-footer">
         <small>© {new Date().getFullYear()} Crono — Desenvolvido por Euzebio Batista.</small>
       </footer>
+    </div>
+  )
+}
+
+function GallerySlider() {
+  const [index, setIndex] = useState(0)
+  const items = new Array(6).fill(null).map((_, i) => ({ id: i, title: `Em breve ${i + 1}` }))
+
+  function prev() { setIndex(i => (i - 1 + items.length) % items.length) }
+  function next() { setIndex(i => (i + 1) % items.length) }
+
+  // thumbnails: show prev, current, next (wrap-around)
+  const len = items.length
+  const thumbs = [ (index - 1 + len) % len, index, (index + 1) % len ]
+
+  // modal state
+  const [modalOpen, setModalOpen] = useState(false)
+  const [modalIndex, setModalIndex] = useState(0)
+
+  function openModal(i) {
+    setModalIndex(i)
+    setModalOpen(true)
+  }
+
+  function closeModal() {
+    setModalOpen(false)
+  }
+
+  function modalPrev() { setModalIndex(i => (i - 1 + items.length) % items.length) }
+  function modalNext() { setModalIndex(i => (i + 1) % items.length) }
+
+  // keyboard support (handles both gallery and modal)
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key === 'ArrowLeft') {
+        if (modalOpen) modalPrev()
+        else prev()
+      }
+      if (e.key === 'ArrowRight') {
+        if (modalOpen) modalNext()
+        else next()
+      }
+      if (e.key === 'Escape' && modalOpen) closeModal()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [modalOpen])
+
+  return (
+    <div className="gallery-block">
+      <div className="gallery-slider">
+        <button className="gallery-arrow" aria-label="Anterior" onClick={prev}>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M15 18 L9 12 L15 6" />
+          </svg>
+        </button>
+        <div className="gallery-main" role="img" aria-label={items[index].title} onClick={() => openModal(index)}>
+          <div className="gallery-main-placeholder">{items[index].title}</div>
+        </div>
+        <button className="gallery-arrow" aria-label="Próximo" onClick={next}>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M9 18 L15 12 L9 6" />
+          </svg>
+        </button>
+      </div>
+
+      <div className="gallery-thumbs">
+        {thumbs.map(i => (
+          <button key={i} className={`thumb ${i === index ? 'active' : ''}`} onClick={() => setIndex(i)} aria-label={`Ir para ${items[i].title}`}>
+            <div className="thumb-placeholder">{items[i].title}</div>
+          </button>
+        ))}
+      </div>
+
+      {modalOpen && (
+        <div className="modal-overlay" role="dialog" aria-modal="true" onClick={closeModal}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <button className="modal-close" aria-label="Fechar" onClick={closeModal}>×</button>
+            <div className="modal-main-row">
+              <button className="gallery-arrow modal" aria-label="Anterior" onClick={modalPrev}>
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M15 18 L9 12 L15 6" />
+                </svg>
+              </button>
+              <div className="modal-main" role="img" aria-label={items[modalIndex].title}>
+                <div className="gallery-main-placeholder">{items[modalIndex].title}</div>
+              </div>
+              <button className="gallery-arrow modal" aria-label="Próximo" onClick={modalNext}>
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M9 18 L15 12 L9 6" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="modal-thumbs">
+              {items.map((it, idx) => (
+                <button key={it.id} className={`thumb ${idx === modalIndex ? 'active' : ''}`} onClick={() => setModalIndex(idx)} aria-label={`Ir para ${it.title}`}>
+                  <div className="thumb-placeholder">{it.title}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -105,8 +105,13 @@ li { padding: 6px 0; }
 	align-items: center;
 	justify-content: space-between;
 	width: 100%;
+	position: sticky; /* keep header visible while scrolling */
+	top: 0;
+	z-index: 240;
+	background: rgba(255,255,255,0.98);
+	backdrop-filter: blur(6px);
+	box-shadow: 0 8px 30px rgba(2,8,12,0.06);
 }
-
 .header-left { display: flex; align-items: center; gap: 12px; }
 
 .logo { height: 44px; width: auto; display: block; }
@@ -151,61 +156,70 @@ input, button { font-size: 16px; }
 /* Hero */
 .home-page .hero-inner { display: flex; flex-direction: column; gap: 20px; align-items: center; justify-content: center; width: 100%; }
 .hero-logo { width: 100%; max-width: 360px; display: block; margin: 0 auto; animation: fadeInUp 600ms ease both; }
-.hero-title { font-size: 28px; margin: 24px 0 8px; color: var(--accent); text-align: center; }
-.hero-sub {
-	margin: 0 auto 16px;
-	color: var(--muted);
-	text-align: center;
-	max-width: 640px; /* limit block width for better readability */
+:root {
+	--bg: #f6f3ef; /* slightly warmer and a bit darker */
+	--accent: #07202b; /* slightly darker accent for contrast */
+	--muted: #57666d; /* slightly darker muted tone */
+	--card: #ffffff;
+	--radius: 8px;
 	font-size: 16px;
 	line-height: 1.5;
 }
 .hero-ctas { display: flex; gap: 12px; justify-content: center; }
 
+/* Small centered logo used in the hero (wolf icon) */
+.hero-content { text-align: center; }
+.hero-small-logo { width: 64px; height: auto; display: block; margin: 0 auto 12px; }
+
+/* Constrain the hero subtitle so it doesn't stretch too wide on large screens */
+.hero-sub {
+	max-width: 720px; /* limit line length for readability */
+	margin: 12px auto 18px; /* add bottom spacing before CTA buttons */
+	color: var(--muted);
+	font-size: 16px;
+	line-height: 1.5;
+}
+
+@media (max-width: 700px) {
+	.hero-sub { max-width: 100%; padding: 0 12px; font-size: 15px; }
+}
+
+
 .btn { display: inline-block; padding: 10px 16px; border-radius: 8px; background: var(--accent); color: #fff; text-decoration: none; font-weight: 600; transition: transform .12s ease, box-shadow .12s ease; }
 .btn:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(10,41,60,0.12); }
 .btn.secondary { background: transparent; color: var(--accent); border: 1px solid rgba(10,41,60,0.08); }
+.cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; padding: 20px; }
 
-/* Cards */
-.features { margin-top: 28px; }
-.features h3, .section-features h3 {
-	margin: 16px 0 12px;
-	font-size: 28px; /* base size for small screens */
-	line-height: 1.05;
-	text-align: center;
-	font-weight: 700;
-}
-.cards {
-	display: grid;
-	grid-template-columns: repeat(3, 1fr);
-	gap: 18px;
-	align-items: start;
+nav a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+    margin-right: 12px;
+    padding: 8px 6px;
+    border-radius: 8px;
 }
 .card {
 	background: linear-gradient(180deg, #ffffff, #fbfbfb);
-	border-radius: 16px;
-	padding: 20px;
+	border-radius: 12px;
+	padding: 18px;
 	box-shadow: 0 10px 30px rgba(10,41,60,0.06);
-	animation: fadeInUp 540ms ease both;
 	transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
-	border: 1px solid rgba(10,41,60,0.04);
-}
-.card {
 	display: flex;
 	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-	text-align: center;
+	gap: 12px;
 }
+
 .card h4 { margin: 8px 0 10px; font-size: 20px; }
 .card p { margin: 0; font-size: 15px; color: var(--muted); line-height: 1.45; }
-
-.card:hover { transform: translateY(-6px); box-shadow: 0 20px 40px rgba(10,41,60,0.10); }
-.card-icon { font-size: 34px; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 12px; background: rgba(10,41,60,0.04); }
+nav a:hover, nav a:focus {
+	background: rgba(7,34,43,0.06);
+	text-decoration: none;
+}
 
 /* example cards and urgency coloring */
 .example-cards { display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
 
+	.site-header { padding: 16px 20px; }
 .example-card {
 	/* keep width fixed but avoid flex-basis affecting height (some containers use column axis) */
 	flex: 0 1 auto;
@@ -216,6 +230,8 @@ input, button { font-size: 16px; }
 	box-shadow: 0 8px 20px rgba(10,41,60,0.06);
 	transition: transform .18s ease, box-shadow .18s ease, background .18s ease, color .12s ease;
 	overflow: hidden;
+	/* make header fixed-like on mobile too (stick to top) */
+	.site-header { position: sticky; top: 0; }
 	position: relative;
 	display: flex;
 	flex-direction: row; /* default: row on desktop/tablet */
@@ -348,7 +364,7 @@ input, button { font-size: 16px; }
 }
 
 /* icons inside cards */
-.card-icon { font-size: 30px; margin-bottom: 10px; }
+.card-icon { font-size: 30px; }
 
 /* sections spacing */
 .how-it-works, .examples { margin-top: 28px; }
@@ -383,6 +399,105 @@ input, button { font-size: 16px; }
 
 /* Treasure-map style for How It Works */
 .how-it-works .steps { margin-top: 12px; }
+
+/* Gallery slider styles */
+.gallery-section { margin-top: 28px; }
+.gallery-block { display: flex; flex-direction: column; gap: 12px; }
+.gallery-slider { display: flex; align-items: center; gap: 12px; justify-content: center; }
+.gallery-main { width: 540px; height: 300px; display:flex; align-items:center; justify-content:center; }
+.gallery-main-placeholder { width: 100%; height: 100%; border-radius: 12px; background: linear-gradient(180deg,#ffffff,#fbfbfb); display:flex; align-items:center; justify-content:center; border: 1px dashed rgba(10,41,60,0.08); font-weight:700; color:var(--muted); }
+.gallery-arrow {
+	background: var(--card);
+	border: 1px solid rgba(10,41,60,0.06);
+	border-radius: 999px; /* circular */
+	width: 44px;
+	height: 44px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	cursor: pointer;
+}
+.gallery-arrow:hover { box-shadow: 0 8px 20px rgba(10,41,60,0.06); transform: translateY(-2px); }
+.gallery-arrow svg { width: 18px; height: 18px; display: block; }
+.gallery-arrow svg path { stroke: var(--accent); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+.gallery-thumbs { display:flex; gap:12px; justify-content:center; align-items:center; }
+.thumb { background: transparent; border: none; padding: 0; cursor: pointer; }
+.thumb-placeholder { width: 120px; height: 72px; border-radius: 8px; display:flex; align-items:center; justify-content:center; background: linear-gradient(180deg,#ffffff,#faf6f0); border: 1px solid rgba(10,41,60,0.06); color: var(--muted); font-weight:700; }
+.thumb.active .thumb-placeholder { box-shadow: 0 12px 30px rgba(10,41,60,0.08); border-color: rgba(10,41,60,0.12); }
+
+/* Cursor affordances */
+.gallery-main:hover, .modal-main:hover {
+	cursor: pointer; /* indicates click-to-zoom/open modal */
+}
+.thumb:hover, .thumb:focus {
+	cursor: pointer;
+}
+
+/* Modal overlay for gallery */
+.modal-overlay {
+	position: fixed;
+	inset: 0;
+	background: rgba(2,8,12,0.62);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 200;
+	padding: 24px;
+}
+
+.modal-content {
+	width: 100%;
+	max-width: 980px;
+	background: #fff;
+	border-radius: 12px;
+	padding: 18px;
+	box-shadow: 0 30px 80px rgba(2,8,12,0.6);
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.modal-close {
+	position: absolute;
+	right: 12px;
+	top: 8px;
+	background: transparent;
+	border: none;
+	font-size: 30px;
+	line-height: 1;
+	color: var(--accent);
+	cursor: pointer;
+}
+
+.modal-main-row { display: flex; align-items: center; gap: 12px; justify-content: center; }
+.modal-main { width: 620px; height: 420px; display:flex; align-items:center; justify-content:center; }
+.modal-main .gallery-main-placeholder { height: 100%; width: 100%; border-radius: 10px; }
+.modal-thumbs { display:flex; gap:10px; justify-content:center; align-items:center; padding-top:6px; }
+.modal-thumbs .thumb-placeholder { width: 92px; height: 64px; }
+
+@media (max-width: 900px) {
+	.modal-main { width: 520px; height: 340px; }
+	.modal-content { padding: 14px; }
+}
+
+@media (max-width: 700px) {
+	.modal-main { width: 320px; height: 220px; }
+	.modal-content { border-radius: 10px; padding: 10px; }
+	.modal-thumbs .thumb-placeholder { width: 64px; height: 44px; }
+}
+
+@media (max-width: 900px) {
+	.gallery-main { width: 420px; height: 240px; }
+	.thumb-placeholder { width: 100px; height: 64px; }
+}
+
+@media (max-width: 700px) {
+	.gallery-main { width: 320px; height: 200px; }
+	.thumb-placeholder { width: 80px; height: 56px; }
+	.gallery-arrow { padding: 0; }
+}
 
 /* Treasure-map style for How It Works (centered cards, no zig-zag) */
 .how-it-works .steps-row {
@@ -451,7 +566,7 @@ input, button { font-size: 16px; }
 
 /* Mobile override: stack steps in a simple descending list (no zig-zag or dashed connectors) */
 @media (max-width: 700px) {
-	.how-it-works .steps-row { justify-items: stretch; row-gap: 20px; position: relative; padding-left: 0; }
+	.how-it-works .steps-row { justify-items: stretch; row-gap: 40px; position: relative; padding-left: 0; }
 	.how-it-works .steps-row .step-card {
 		transform: none !important;
 		justify-self: stretch !important;
@@ -555,7 +670,25 @@ input, button { font-size: 16px; }
 }
 
 /* example list: each example-card becomes a full-width stacked section within the inner container */
-.example-list { display: flex; flex-direction: column; gap: 20px; }
+.example-list { display: flex; flex-direction: column; gap: 28px; }
+
+/* Make example cards occupy full width of the content area */
+.example-list > .example-card {
+	width: 100%;
+	padding: 18px 20px;
+	min-height: 160px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+/* If there are multiple cards, make the middle one visually highlighted as 'medium' (yellow) */
+.example-list > .example-card:nth-child(2) {
+	background: linear-gradient(180deg,#f1c40f 0%, #e0b700 100%);
+	color: #07202a;
+	box-shadow: 0 18px 44px rgba(10,41,60,0.12);
+}
+
 .example-card.full-width { width: 100%; }
 
 @media (min-width: 900px) {

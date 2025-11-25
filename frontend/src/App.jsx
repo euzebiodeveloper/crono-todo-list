@@ -26,6 +26,7 @@ export default function App() {
           <div className="header-left">
             <Link to="/" aria-label="Home">
               <img src="/images/name-logo.png" alt="Crono" className="logo logo-name" />
+              <img src="/images/icon.png" alt="" aria-hidden="true" className="logo logo-icon" />
             </Link>
           </div>
 
