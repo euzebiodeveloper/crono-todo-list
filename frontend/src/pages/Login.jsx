@@ -22,17 +22,20 @@ export default function Login() {
   return (
     <div className="section-bleed auth-section">
       <div className="section-inner">
-        <h2>Entrar</h2>
-        <form onSubmit={handleSubmit} className="auth-form">
-          <label className="visually-hidden" htmlFor="email">Email</label>
-          <input id="email" type="email" placeholder="email@example.com" value={email} onChange={e => setEmail(e.target.value)} />
+        <div className="auth-card">
+          <h2>Entrar</h2>
+          <p className="muted">Acesse sua conta para gerenciar suas tarefas e sincronizar entre dispositivos.</p>
+          <form onSubmit={handleSubmit} className="auth-form">
+            <label className="visually-hidden" htmlFor="email">Email</label>
+            <input id="email" type="email" placeholder="email@example.com" value={email} onChange={e => setEmail(e.target.value)} />
 
-          <label className="visually-hidden" htmlFor="password">Senha</label>
-          <input id="password" type="password" placeholder="senha" value={password} onChange={e => setPassword(e.target.value)} />
+            <label className="visually-hidden" htmlFor="password">Senha</label>
+            <input id="password" type="password" placeholder="senha" value={password} onChange={e => setPassword(e.target.value)} />
 
-          <button type="submit" className="btn">Entrar</button>
-        </form>
-        {message && <p className="message">{message}</p>}
+            <button type="submit" className="btn">Entrar</button>
+          </form>
+          {message && <p className="message">{message}</p>}
+        </div>
       </div>
     </div>
   )

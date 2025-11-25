@@ -27,20 +27,23 @@ export default function Register() {
   return (
     <div className="section-bleed auth-section">
       <div className="section-inner">
-        <h2>Registrar</h2>
-        <form onSubmit={handleSubmit} className="auth-form">
-          <label className="visually-hidden" htmlFor="name">Nome</label>
-          <input id="name" placeholder="Nome" value={name} onChange={e => setName(e.target.value)} />
+        <div className="auth-card">
+          <h2>Registrar</h2>
+          <p className="muted">Crie sua conta para salvar listas, histórico e acessar seus dados em qualquer lugar.</p>
+          <form onSubmit={handleSubmit} className="auth-form">
+            <label className="visually-hidden" htmlFor="name">Nome</label>
+            <input id="name" placeholder="Nome" value={name} onChange={e => setName(e.target.value)} />
 
-          <label className="visually-hidden" htmlFor="reg-email">Email</label>
-          <input id="reg-email" type="email" placeholder="email@example.com" value={email} onChange={e => setEmail(e.target.value)} />
+            <label className="visually-hidden" htmlFor="reg-email">Email</label>
+            <input id="reg-email" type="email" placeholder="email@example.com" value={email} onChange={e => setEmail(e.target.value)} />
 
-          <label className="visually-hidden" htmlFor="reg-password">Senha</label>
-          <input id="reg-password" type="password" placeholder="senha" value={password} onChange={e => setPassword(e.target.value)} />
+            <label className="visually-hidden" htmlFor="reg-password">Senha</label>
+            <input id="reg-password" type="password" placeholder="senha" value={password} onChange={e => setPassword(e.target.value)} />
 
-          <button type="submit" className="btn">Criar conta</button>
-        </form>
-        {message && <p className="message">{message}</p>}
+            <button type="submit" className="btn">Criar conta</button>
+          </form>
+          {message && <p className="message">{message}</p>}
+        </div>
       </div>
     </div>
   )

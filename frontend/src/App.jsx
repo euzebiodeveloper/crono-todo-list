@@ -13,7 +13,12 @@ export default function App() {
   useEffect(() => {
     function onDoc(e) {
       if (!menuOpen) return
-      if (navRef.current && !navRef.current.contains(e.target)) setMenuOpen(false)
+      // If click is outside the nav AND not the mobile-menu-button, close the menu.
+      // This prevents the sequence where pointerdown closes the menu and the
+      // button's click handler toggles it back open.
+      const clickedInsideNav = navRef.current && navRef.current.contains(e.target)
+      const clickedToggle = e.target && (e.target.closest && e.target.closest('.mobile-menu-button'))
+      if (!clickedInsideNav && !clickedToggle) setMenuOpen(false)
     }
     document.addEventListener('pointerdown', onDoc)
     return () => document.removeEventListener('pointerdown', onDoc)
@@ -33,9 +38,9 @@ export default function App() {
           <div className="header-right">
             <nav ref={navRef} className={`header-nav ${menuOpen ? 'open' : ''}`} aria-label="Main navigation">
               <Link to="/">Home</Link>
-              <Link to="/about">About</Link>
+              <Link to="/about">Sobre</Link>
               <Link to="/login">Login</Link>
-              <Link to="/register">Register</Link>
+              <Link to="/register">Registrar</Link>
             </nav>
 
             <button
