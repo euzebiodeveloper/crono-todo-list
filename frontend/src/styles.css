@@ -74,8 +74,8 @@ input, textarea {
 	flex: 1 1 220px;
 }
 
-/* ensure auth forms (login/register) use full-width stacked inputs */
-.auth-form input, .auth-form textarea {
+/* ensure auth forms (login/register) use full-width stacked textual inputs (exclude checkboxes/radios) */
+.auth-form input:not([type="checkbox"]):not([type="radio"]), .auth-form textarea {
 	flex: none;
 	width: 100%;
 }
@@ -124,13 +124,13 @@ input, textarea {
 	text-align: left; /* keep inputs left-aligned inside the full-width form */
 }
 
-.auth-section .auth-card .auth-form input,
+.auth-section .auth-card .auth-form input:not([type="checkbox"]):not([type="radio"]),
 .auth-section .auth-card .auth-form .btn {
 	width: 100%;
 }
 
-/* auth form visuals */
-.auth-form input {
+/* auth form visuals (only textual inputs) */
+.auth-form input:not([type="checkbox"]):not([type="radio"]) {
 	display: block;
 	width: 100%;
 	padding: 12px 14px;
@@ -201,6 +201,26 @@ li { padding: 6px 0; }
 
 .header-right { display: flex; align-items: center; gap: 12px; }
 .header-nav { display: flex; gap: 16px; align-items: center; }
+
+/* Make buttons placed inside the header nav visually match the nav links
+   (so the 'Sair' button looks consistent). Keep this scoped to .header-nav */
+.header-nav .btn {
+	background: transparent;
+	border: none;
+	padding: 8px 6px;
+	color: var(--accent);
+	font-weight: 600;
+	border-radius: 8px;
+	cursor: pointer;
+}
+.header-nav .btn:hover,
+.header-nav .btn:focus {
+	/* match the desktop nav link hover (same background and no transform) */
+	background: rgba(7,34,43,0.06);
+	text-decoration: none;
+	transform: none !important;
+	box-shadow: none !important;
+}
 
 .visually-hidden {
 	position: absolute !important;
@@ -273,8 +293,6 @@ input, button { font-size: 16px; }
 
 
 .btn { display: inline-block; padding: 10px 16px; border-radius: 8px; background: var(--accent); color: #fff; text-decoration: none; font-weight: 600; transition: transform .12s ease, box-shadow .12s ease; }
-.btn:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(10,41,60,0.12); }
-.btn.secondary { background: transparent; color: var(--accent); border: 1px solid rgba(10,41,60,0.08); }
 .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; padding: 20px; }
 
 nav a {
@@ -328,6 +346,9 @@ nav a:hover, nav a:focus {
 	align-self: flex-start; /* prevents stretch in column flex containers */
 }
 
+/* indicate the whole card is clickable */
+.example-card { cursor: pointer; }
+
 /* full-card background for urgency classes (fills entire card) */
 .example-card.urgency-low {
 	background: linear-gradient(180deg,#2ecc71 0%, #27ae60 100%);
@@ -356,6 +377,10 @@ nav a:hover, nav a:focus {
 .ec-title { font-weight: 700; font-size: 26px; line-height: 1.05; display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .ec-sub { font-size: 18px; opacity: 0.94; line-height: 1.08; }
 .ec-right { display:flex; align-items:center; gap:8px; }
+/* icon buttons inside cards */
+.icon-btn { background: transparent; border: none; padding: 6px; border-radius: 8px; color: var(--accent); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.icon-btn:hover { background: rgba(7,34,43,0.06); }
+.icon-btn svg { display: block; }
 
 /* adjust subtext color depending on urgency for readability */
 .example-card.urgency-low .ec-sub,
@@ -734,6 +759,16 @@ nav a:hover, nav a:focus {
 .section-bleed { width: 100vw; position: relative; left: 50%; right: 50%; margin-left: -50vw; margin-right: -50vw; padding: 28px 0; }
 .section-inner { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
 
+/* Dashboard header: title on the left, logout button aligned to the right */
+.dashboard-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 12px;
+}
+.dashboard-header h2 { margin: 0; }
+
 /* features as stacked sections (full-width sections stacked vertically) */
 .section-features { background: linear-gradient(180deg, rgba(10,41,60,0.02), rgba(10,41,60,0.01)); }
 .cards.column { display: flex; flex-direction: column; gap: 12px; }
@@ -895,6 +930,12 @@ nav a:hover, nav a:focus {
 @media (max-width: 700px) {
 	.mobile-menu-button { display: inline-flex; align-items: center; }
 
+	/* ensure nav buttons behave like links on mobile (block-level) */
+	.header-nav .btn { display: block; padding: 10px 12px; }
+
+	/* match mobile nav link hover color for buttons as well */
+	.header-nav .btn:hover, .header-nav .btn:focus { background: rgba(10,41,60,0.04); }
+
 	/* floating panel style for mobile menu with animation */
 	.header-nav {
 		display: block;
@@ -922,12 +963,14 @@ nav a:hover, nav a:focus {
 	.header-nav a { display: block; padding: 10px 12px; border-radius: 8px; color: var(--accent); }
 	.header-nav a:hover { background: rgba(10,41,60,0.04); }
 
-	/* reveal animation for links (stagger) */
-	.header-nav.open a { opacity: 0; transform: translateY(6px); animation: fadeInUp .32s ease forwards; }
-	.header-nav.open a:nth-child(1) { animation-delay: 0ms }
-	.header-nav.open a:nth-child(2) { animation-delay: 60ms }
-	.header-nav.open a:nth-child(3) { animation-delay: 120ms }
-	.header-nav.open a:nth-child(4) { animation-delay: 180ms }
+	/* reveal animation for nav items (links and buttons) with stagger */
+	/* slightly slower entrance and wider stagger so the reveal feels balanced */
+	.header-nav.open > * { opacity: 0; transform: translateY(8px); animation: fadeInUp .44s cubic-bezier(.2,.9,.2,1) forwards; }
+	.header-nav.open > *:nth-child(1) { animation-delay: 0ms }
+	.header-nav.open > *:nth-child(2) { animation-delay: 80ms }
+	.header-nav.open > *:nth-child(3) { animation-delay: 160ms }
+	.header-nav.open > *:nth-child(4) { animation-delay: 240ms }
+	.header-nav.open > *:nth-child(5) { animation-delay: 320ms }
 
 	/* Mobile: stack card content so title and dates/badge move below title/meta */
 	.example-card {
@@ -943,7 +986,106 @@ nav a:hover, nav a:focus {
 /* Auth form styles */
 .auth-page { max-width: 420px; margin: 0 auto; }
 .auth-form { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
-.auth-form input { padding: 12px; border-radius: 8px; border: 1px solid rgba(10,41,60,0.06); }
+.auth-form input:not([type="checkbox"]):not([type="radio"]) { padding: 12px; border-radius: 8px; border: 1px solid rgba(10,41,60,0.06); }
 
 /* subtle focus states */
 input:focus, button:focus, a:focus { outline: 3px solid rgba(10,41,60,0.08); outline-offset: 2px; }
+
+/* Activity form: checkbox rows and weekday selectors */
+.form-checkbox-row { text-align: left; margin: 6px 0 8px; }
+.checkbox-left { display: flex; flex-direction: row; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; }
+.checkbox-left input { margin: 0; transform: translateY(1px); }
+
+.activity-controls { display: flex; flex-direction: row; align-items: center; gap: 12px; flex-wrap: wrap; margin: 8px 0 8px 4px; }
+
+.weekday-group { display: flex; gap: 6px; flex-wrap: wrap; margin: 0; width: 100%; align-items: center; }
+
+/* top controls row: make inline card/activity forms take full available width so inputs don't get cut */
+.activities-controls-row { display: flex; gap: 8px; align-items: flex-start; }
+.activities-controls-row .card-mini-form { flex: 1 1 100%; width: 100%; margin: 0; min-width: 0; }
+/* style inline forms to look like small cards */
+.activities-controls-row .card-mini-form {
+	flex: 1 1 100%;
+	width: 100%;
+	margin: 0;
+	min-width: 0;
+	background: var(--card);
+	border-radius: 10px;
+	padding: 12px;
+	box-shadow: 0 10px 30px rgba(2,8,12,0.06);
+	border: 1px solid rgba(10,41,60,0.04);
+}
+/* make the inline form buttons share the horizontal space equally */
+.activities-controls-row .card-mini-form .btn { width: auto; flex: 1 1 50%; padding: 10px 14px; line-height: 1.1; height: 45px; }
+
+.activities-controls-row .card-mini-form .message { margin: 8px 0 0; }
+
+/* visually indicate disabled state for the inline controls (e.g. 'Nova atividade') */
+.activities-controls-row .btn[disabled],
+.activities-controls-row .btn:disabled {
+	opacity: 0.48;
+	cursor: not-allowed;
+	background: rgba(7,34,43,0.08);
+	color: var(--muted);
+	box-shadow: none;
+	transform: none;
+	border: 1px solid rgba(7,34,43,0.06);
+}
+.activities-controls-row .btn[disabled]:hover,
+.activities-controls-row .btn:disabled:hover {
+	background: rgba(7,34,43,0.08);
+}
+.weekday-label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; padding: 6px 10px; border-radius: 8px; background: #fff; border: 1px solid rgba(10,41,60,0.06); font-weight: 600; color: var(--accent); }
+.weekday-label input { margin: 0; vertical-align: middle; }
+.weekday-label input[type="checkbox"] { transform: translateY(2px); }
+
+@media (max-width: 700px) {
+	.weekday-label { padding: 8px 10px; }
+}
+
+/* label for due date should occupy full width and sit above the date input */
+.due-label { display: block; width: 100%; font-weight: 700; margin-top: 8px; margin-bottom: 6px; }
+
+/* color palette for new cards */
+.color-palette { display: flex; gap: 8px; align-items: center; }
+.color-swatch { width: 26px; height: 26px; border-radius: 50%; border: 2px solid rgba(10,41,60,0.06); padding: 0; cursor: pointer; box-shadow: 0 4px 10px rgba(2,8,12,0.03); }
+.color-swatch.selected { outline: 3px solid rgba(0,0,0,0.12); transform: scale(1.06); }
+
+/* small color dot shown on card */
+.card-dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; margin-right: 10px; vertical-align: middle; }
+
+/* color shown in modal header */
+.modal-content .card-dot { width: 18px; height: 18px; margin-right: 8px; }
+
+/* Highlight/glow bounce for newly created or accessed card */
+@keyframes glowBounce {
+	0% { box-shadow: 0 0 0 rgba(0,0,0,0); transform: scale(1); border-color: rgba(0,0,0,0.06); }
+	40% { box-shadow: 0 12px 40px rgba(0,0,0,0.75); transform: scale(1.02); border-color: rgba(0,0,0,0.95); }
+	70% { box-shadow: 0 8px 22px rgba(0,0,0,0.48); transform: scale(1.01); }
+	100% { box-shadow: 0 0 0 rgba(0,0,0,0); transform: scale(1); border-color: rgba(0,0,0,0.06); }
+}
+.glow-border {
+	border: 2px solid rgba(0,0,0,0.85);
+	animation: glowBounce 900ms cubic-bezier(.2,.9,.2,1) both;
+}
+
+.empty-card {
+	border: 1px solid rgba(0,0,0,0.12);
+	/* subtle pulsing border and soft shadow to indicate 'empty' state */
+	animation: pulseBorder 2800ms ease-in-out infinite;
+}
+
+@keyframes pulseBorder {
+	0% { box-shadow: 0 0 0 rgba(0,0,0,0); border-color: rgba(0,0,0,0.12); }
+	40% { box-shadow: 0 10px 30px rgba(0,0,0,0.10); border-color: rgba(0,0,0,0.7); }
+	70% { box-shadow: 0 6px 18px rgba(0,0,0,0.08); border-color: rgba(0,0,0,0.45); }
+	100% { box-shadow: 0 0 0 rgba(0,0,0,0); border-color: rgba(0,0,0,0.12); }
+}
+
+/* Removing animation for delete feedback */
+@keyframes removeFade {
+	0% { opacity: 1; transform: scale(1); }
+	100% { opacity: 0; transform: scale(0.96) translateY(-6px); }
+}
+.example-card.removing { animation: removeFade 420ms ease both; }
+

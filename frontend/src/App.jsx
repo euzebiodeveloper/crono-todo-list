@@ -1,13 +1,32 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom'
 import Home from './pages/Home'
 import About from './pages/About'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import Dashboard from './pages/Dashboard'
+import Atividades from './pages/Atividades'
 
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem('token'))
   const navRef = useRef()
+
+  // small component used inside the Router to logout and redirect home
+  function LogoutButton() {
+    const navigate = useNavigate()
+    function handleLogout() {
+      localStorage.removeItem('token')
+      setIsAuthenticated(false)
+      setMenuOpen(false)
+      navigate('/')
+    }
+    return (
+      <button className="btn secondary" onClick={handleLogout}>
+        Sair
+      </button>
+    )
+  }
 
   // close menu on outside click
   useEffect(() => {
@@ -39,8 +58,18 @@ export default function App() {
             <nav ref={navRef} className={`header-nav ${menuOpen ? 'open' : ''}`} aria-label="Main navigation">
               <Link to="/">Home</Link>
               <Link to="/about">Sobre</Link>
-              <Link to="/login">Login</Link>
-              <Link to="/register">Registrar</Link>
+              {isAuthenticated ? (
+                <>
+                  <Link to="/dashboard">Dashboard</Link>
+                  <Link to="/atividades">Atividades</Link>
+                  <LogoutButton />
+                </>
+              ) : (
+                <>
+                  <Link to="/login">Login</Link>
+                  <Link to="/register">Registrar</Link>
+                </>
+              )}
             </nav>
 
             <button
@@ -58,8 +87,10 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/about" element={<About />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            <Route path="/login" element={<Login onAuth={(token) => { localStorage.setItem('token', token); setIsAuthenticated(true); }} />} />
+            <Route path="/register" element={<Register onAuth={(token) => { localStorage.setItem('token', token); setIsAuthenticated(true); }} />} />
+            <Route path="/dashboard" element={<Dashboard onLogout={() => { localStorage.removeItem('token'); setIsAuthenticated(false); }} />} />
+            <Route path="/atividades" element={<Atividades />} />
           </Routes>
         </main>
       </div>

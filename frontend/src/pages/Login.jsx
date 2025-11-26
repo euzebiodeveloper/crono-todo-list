@@ -1,17 +1,26 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { loginUser } from '../api'
 
-export default function Login() {
+export default function Login({ onAuth }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState(null)
+  const navigate = useNavigate()
 
   async function handleSubmit(e) {
     e.preventDefault()
     setMessage(null)
     try {
       const res = await loginUser({ email, password })
-      if (res.token) setMessage('Login realizado com sucesso')
+      if (res.token) {
+        // store token and notify parent
+        if (onAuth) onAuth(res.token)
+        localStorage.setItem('token', res.token)
+        setMessage('Login realizado com sucesso')
+        navigate('/dashboard')
+        return
+      }
       else if (res.error) setMessage(res.error)
       else setMessage('Resposta inesperada do servidor')
     } catch (err) {

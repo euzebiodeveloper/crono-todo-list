@@ -10,8 +10,16 @@ router.get('/', async (req, res) => {
 
 // POST /api/todos
 router.post('/', async (req, res) => {
-  const { title } = req.body;
-  const todo = new Todo({ title });
+  const { title, description, name, recurring, weekdays, dueDate, color } = req.body;
+  const todo = new Todo({
+    title,
+    description: description || '',
+    name: name || '',
+    recurring: !!recurring,
+    weekdays: Array.isArray(weekdays) ? weekdays : [],
+    dueDate: dueDate ? new Date(dueDate) : undefined,
+    color: color || '#000000'
+  });
   await todo.save();
   res.status(201).json(todo);
 });

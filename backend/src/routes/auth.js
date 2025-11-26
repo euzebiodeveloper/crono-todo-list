@@ -50,4 +50,51 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// simple auth middleware: expects `Authorization: Bearer <token>`
+function authMiddleware(req, res, next) {
+  const auth = req.headers.authorization;
+  if (!auth) return res.status(401).json({ error: 'No authorization header' });
+  const parts = auth.split(' ');
+  if (parts.length !== 2 || parts[0] !== 'Bearer') return res.status(401).json({ error: 'Invalid authorization header' });
+  const token = parts[1];
+  try {
+    const payload = jwt.verify(token, JWT_SECRET);
+    req.user = payload; // { id, email }
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+}
+
+// GET /api/auth/me - returns basic user info (requires auth)
+router.get('/me', authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('name email');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json({ user: { id: user._id, name: user.name, email: user.email } });
+  } catch (err) {
+    console.error('Me error', err);
+    res.status(500).json({ error: 'Erro ao buscar usuário' });
+  }
+});
+
+// POST /api/auth/reset-password - change password (requires auth)
+router.post('/reset-password', authMiddleware, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Missing fields' });
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) return res.status(401).json({ error: 'Current password is incorrect' });
+    const salt = await bcrypt.genSalt(10);
+    user.passwordHash = await bcrypt.hash(newPassword, salt);
+    await user.save();
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Reset password error', err);
+    res.status(500).json({ error: 'Erro ao atualizar senha' });
+  }
+});
+
 module.exports = router;
