@@ -303,7 +303,7 @@ export default function Atividades() {
         {/* Card view modal: shows activities that belong to this card (by matching name === card.title) */}
         {viewCard && (
           <div className="modal-overlay" onClick={() => setViewCard(null)}>
-            <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 620, borderTop: `6px solid ${viewCard.color || '#000'}` }}>
+            <div className="modal-content card-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 620, borderTop: `6px solid ${viewCard.color || '#000'}` }}>
               <button className="modal-close" onClick={() => setViewCard(null)}>×</button>
               <h3 style={{ marginTop: 0 }}>{viewCard.title}</h3>
               {viewCard.description && <p className="muted">{viewCard.description}</p>}
