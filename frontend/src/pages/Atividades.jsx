@@ -268,7 +268,7 @@ export default function Atividades() {
         ) : (
           <div style={{ display: 'grid', gap: 12 }}>
             {cards.map(t => (
-              <div key={t._id} onClick={() => setViewCard(t)} className={"example-card compact empty-card " + (removingId === t._id ? ' removing' : '')} style={{ borderLeft: `6px solid ${t.color || '#000'}`, background: t.color || undefined, color: t.color ? (isColorDark(t.color) ? '#fff' : '#07202a') : undefined }}>
+              <div key={t._id} onClick={() => setViewCard(t)} className={"example-card compact empty-card " + (t.color ? 'colored ' : '') + (removingId === t._id ? ' removing' : '')} style={{ background: t.color || undefined, color: t.color ? '#fff' : undefined, ['--card-color']: t.color || '#000' }}>
                 <div className="ec-left">
                   <span className="ec-title">{t.title}</span>
                   <span className="ec-sub muted">{t.description && String(t.description).trim().length > 0 ? t.description : (t.completed ? 'Concluída' : 'Sem descrição')}</span>

@@ -1071,16 +1071,43 @@ input:focus, button:focus, a:focus { outline: 3px solid rgba(10,41,60,0.08); out
 
 .empty-card {
 	border: 1px solid rgba(0,0,0,0.12);
-	/* subtle pulsing border and soft shadow to indicate 'empty' state */
-	animation: pulseBorder 2800ms ease-in-out infinite;
+	position: relative; /* for the animated left border pseudo-element */
 }
 
-@keyframes pulseBorder {
-	0% { box-shadow: 0 0 0 rgba(0,0,0,0); border-color: rgba(0,0,0,0.12); }
-	40% { box-shadow: 0 10px 30px rgba(0,0,0,0.10); border-color: rgba(0,0,0,0.7); }
-	70% { box-shadow: 0 6px 18px rgba(0,0,0,0.08); border-color: rgba(0,0,0,0.45); }
-	100% { box-shadow: 0 0 0 rgba(0,0,0,0); border-color: rgba(0,0,0,0.12); }
+/* animated left border that pulses from the card's color to white and back */
+.example-card.empty-card {
+	/* width of the animated left bar (can be overridden per-card via inline var) */
+	--left-border-width: 12px;
 }
+.example-card.empty-card::after {
+	content: '';
+	position: absolute;
+	left: 0;
+	top: 0;
+	bottom: 0;
+	width: var(--left-border-width, 12px);
+	border-top-left-radius: 12px;
+	border-bottom-left-radius: 12px;
+	background: var(--card-color, #000);
+	pointer-events: none;
+	animation: borderPulse 2000ms ease-in-out infinite;
+}
+
+/* make the card content start immediately after the animated bar (no extra gap) */
+.example-card.empty-card.compact,
+.example-card.empty-card {
+	/* leave a bit of breathing room after the animated bar */
+	padding-left: calc(var(--left-border-width) + 10px);
+}
+
+@keyframes borderPulse {
+	0% { background: var(--card-color, #000); }
+	50% { background: #fff; }
+	100% { background: var(--card-color, #000); }
+}
+
+/* ensure card content sits above the animated border */
+.example-card .ec-left, .example-card .ec-right { position: relative; z-index: 2; }
 
 /* Removing animation for delete feedback */
 @keyframes removeFade {
@@ -1088,4 +1115,12 @@ input:focus, button:focus, a:focus { outline: 3px solid rgba(10,41,60,0.08); out
 	100% { opacity: 0; transform: scale(0.96) translateY(-6px); }
 }
 .example-card.removing { animation: removeFade 420ms ease both; }
+
+/* When a card is colored, force text and icon color to white for contrast */
+.example-card.colored { color: #fff; }
+.example-card.colored .ec-title,
+.example-card.colored .ec-sub { color: #fff !important; }
+.example-card.colored .icon-btn { color: #fff !important; }
+.example-card.colored .icon-btn svg { stroke: currentColor; }
+
 
