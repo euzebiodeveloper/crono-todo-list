@@ -35,6 +35,7 @@ export default function Atividades() {
   const [cardDesc, setCardDesc] = useState('')
   const [cardColor, setCardColor] = useState('#000000')
   const [name, setName] = useState('')
+  const [selectedCardId, setSelectedCardId] = useState('')
   const [recurring, setRecurring] = useState(false)
   const [weekdays, setWeekdays] = useState([])
   const [dueDate, setDueDate] = useState('')
@@ -47,6 +48,65 @@ export default function Atividades() {
   const [editingLoading, setEditingLoading] = useState(false)
   const [removingId, setRemovingId] = useState(null)
   const [viewCard, setViewCard] = useState(null)
+  const [exitingIds, setExitingIds] = useState(new Set())
+
+  // update activity completion state
+  async function updateActivityCompletion(id, completed) {
+    try {
+      if (completed) {
+        // animate out first
+        setExitingIds(prev => {
+          const copy = new Set(prev)
+          copy.add(id)
+          return copy
+        })
+        // after animation, persist and save log
+        setTimeout(async () => {
+          try {
+            const res = await updateTodo(id, { completed: true })
+            if (res && (res.status === 200 || res.ok)) {
+              const t = await fetchTodos()
+              setTodos(Array.isArray(t) ? t : [])
+              const all = Array.isArray(t) ? t : []
+              const act = all.find(x => String(x._id) === String(id))
+              saveCompletedActivity(act)
+            }
+          } catch (err) {
+            console.error(err)
+          } finally {
+            setExitingIds(prev => {
+              const copy = new Set(prev)
+              copy.delete(id)
+              return copy
+            })
+          }
+        }, 360)
+      } else {
+        // uncheck -> update immediately
+        const res = await updateTodo(id, { completed: false })
+        if (res && (res.status === 200 || res.ok)) {
+          const t = await fetchTodos()
+          setTodos(Array.isArray(t) ? t : [])
+        }
+      }
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  function saveCompletedActivity(activity) {
+    try {
+      if (!activity) return
+      const key = 'completedActivitiesLog'
+      const raw = localStorage.getItem(key)
+      let arr = []
+      try { arr = raw ? JSON.parse(raw) : [] } catch (_) { arr = [] }
+      arr.unshift({ id: activity._id, title: activity.title, description: activity.description || '', completedAt: new Date().toISOString(), cardId: activity.parentId || null })
+      // keep reasonable length
+      if (arr.length > 200) arr = arr.slice(0, 200)
+      localStorage.setItem(key, JSON.stringify(arr))
+    } catch (e) { console.error('Erro ao salvar registro concluído', e) }
+  }
 
   useEffect(() => {
     async function load() {
@@ -72,6 +132,13 @@ export default function Atividades() {
     const hasDue = !!t.dueDate
     return !hasName && !hasRecurring && !hasWeekdays && !hasDue
   })
+
+  // ensure selectedCardId defaults to first card when cards change
+  useEffect(() => {
+    if ((!selectedCardId || selectedCardId === '') && cards && cards.length > 0) {
+      setSelectedCardId(cards[0]._id)
+    }
+  }, [cards])
 
   const hasAnyActivity = todos.some(t => {
     const hasName = t.name && String(t.name).trim().length > 0
@@ -137,6 +204,12 @@ export default function Atividades() {
     }
     try {
       const payload = { title, name, recurring, weekdays, dueDate: dueDate ? dueDate : null }
+      // if a card is selected, attach its id as parentId and also set name to card title for legacy matching
+      if (selectedCardId) {
+        payload.parentId = selectedCardId
+        const card = cards.find(c => String(c._id) === String(selectedCardId))
+        if (card) payload.name = card.title
+      }
       const res = await createTodo(payload)
       if (res && res.status === 201) {
         setFormMsg('Atividade criada')
@@ -149,6 +222,16 @@ export default function Atividades() {
         // reload list
         const t = await fetchTodos()
         setTodos(Array.isArray(t) ? t : [])
+        // keep selectedCardId defaulting to first card after reload
+        const fresh = Array.isArray(t) ? t : []
+        const freshCards = fresh.filter(tt => {
+          const hasName = tt.name && String(tt.name).trim().length > 0
+          const hasRecurring = !!tt.recurring
+          const hasWeekdays = Array.isArray(tt.weekdays) && tt.weekdays.length > 0
+          const hasDue = !!tt.dueDate
+          return !hasName && !hasRecurring && !hasWeekdays && !hasDue
+        })
+        if (freshCards.length > 0) setSelectedCardId(freshCards[0]._id)
       } else {
         const body = await res.json()
         setFormMsg(body.error || 'Erro ao criar atividade')
@@ -228,12 +311,22 @@ export default function Atividades() {
             </form>
           )}
           {!showForm && !showCardForm && (
-            <button className="btn" onClick={() => { setShowForm(true); setShowCardForm(false); }} disabled={!hasAnyActivity}>Nova atividade</button>
+            <button className="btn" onClick={() => { setShowForm(true); setShowCardForm(false); if (cards && cards.length > 0) setSelectedCardId(cards[0]._id); }} disabled={!(hasAnyActivity || (cards && cards.length > 0))}>Nova atividade</button>
           )}
           {showForm && (
             <form onSubmit={handleCreate} style={{ marginTop: 12 }} className="auth-form card-mini-form">
               <input placeholder="Título" value={title} onChange={e => setTitle(e.target.value)} />
-              <input placeholder="Nome da atividade" value={name} onChange={e => setName(e.target.value)} />
+              {/* If there are cards, show a select to pick which card this activity belongs to. Otherwise allow free text name. */}
+                {cards && cards.length > 0 ? (
+                <select className="card-select" value={selectedCardId} onChange={e => { setSelectedCardId(e.target.value); const card = cards.find(c => c._id === e.target.value); setName(card ? card.title : ''); }}>
+                  <option value="">-- Selecionar cartão (opcional) --</option>
+                  {cards.map(c => (
+                    <option key={c._id} value={c._id} style={{ color: c.color || 'inherit' }}>{c.title}</option>
+                  ))}
+                </select>
+              ) : (
+                <input placeholder="Nome da atividade" value={name} onChange={e => setName(e.target.value)} />
+              )}
               <div className="activity-controls">
                 <label className="checkbox-left">
                   <input type="checkbox" checked={recurring} onChange={e => setRecurring(e.target.checked)} />
@@ -302,7 +395,7 @@ export default function Atividades() {
         )}
         {/* Card view modal: shows activities that belong to this card (by matching name === card.title) */}
         {viewCard && (
-          <div className="modal-overlay" onClick={() => setViewCard(null)}>
+            <div className="modal-overlay" onClick={() => { setViewCard(null) }}>
             <div className="modal-content card-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 620, borderTop: `6px solid ${viewCard.color || '#000'}` }}>
               <button className="modal-close" onClick={() => setViewCard(null)}>×</button>
               <h3 style={{ marginTop: 0 }}>{viewCard.title}</h3>
@@ -310,25 +403,35 @@ export default function Atividades() {
               <hr />
               <h4>Atividades relacionadas</h4>
               {(() => {
-                const related = todos.filter(x => x.name && String(x.name).trim() === String(viewCard.title).trim())
+                // collect related activities for this card (prefer parentId, fallback to name match)
+                const related = todos.filter(x => {
+                  try {
+                    if (x.parentId && String(x.parentId) === String(viewCard._id)) return true
+                  } catch (_) {}
+                  if (x.name && String(x.name).trim() === String(viewCard.title).trim()) return true
+                  return false
+                }).filter(r => !r.completed) // only show not-yet-completed activities
                 if (!related || related.length === 0) {
                   return <p className="muted">Nenhuma atividade neste cartão.</p>
                 }
                 return (
                   <ul style={{ padding: 0, listStyle: 'none', margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {related.map(r => (
-                      <li key={r._id} style={{ padding: 10, borderRadius: 8, background: 'rgba(0,0,0,0.03)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
-                          <div>
-                            <div style={{ fontWeight: 700 }}>{r.title}</div>
-                            <div className="muted" style={{ fontSize: 13 }}>{r.description || ''}</div>
+                        <li key={r._id} className={"activity-item" + (exitingIds.has(r._id) ? ' exit' : '') + (viewCard ? ' animate-in' : '')} style={{ padding: 10, borderRadius: 8, background: 'rgba(0,0,0,0.03)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontWeight: 700 }}>{r.title}</div>
+                              <div className="muted" style={{ fontSize: 13 }}>{r.description || ''}</div>
+                            </div>
+                            <div className={"activity-actions" + (viewCard ? ' animate-in' : '')} style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                              <div className="muted" style={{ fontSize: 13 }}>{r.dueDate ? new Date(r.dueDate).toLocaleString() : ''}</div>
+                              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                <input type="checkbox" aria-label={`Marcar ${r.title} como concluída`} checked={!!r.completed} disabled={exitingIds.has(r._id)} onChange={e => { updateActivityCompletion(r._id, e.target.checked); }} />
+                              </label>
+                            </div>
                           </div>
-                          <div className="muted" style={{ fontSize: 13 }}>
-                            {r.dueDate ? new Date(r.dueDate).toLocaleString() : ''}
-                          </div>
-                        </div>
-                      </li>
-                    ))}
+                        </li>
+                      ))}
                   </ul>
                 )
               })()}

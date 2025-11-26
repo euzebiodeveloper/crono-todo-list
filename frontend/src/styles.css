@@ -80,6 +80,58 @@ input, textarea {
 	width: 100%;
 }
 
+/* style selects inside auth forms (match input visuals) */
+.auth-form select, .card-select {
+	display: block;
+	width: 100%;
+	height: 45px;
+	padding: 10px 12px;
+	border-radius: 8px;
+	border: 1px solid rgba(10,41,60,0.06);
+	background: #fff;
+	color: var(--accent);
+	font-size: 15px;
+	line-height: 1.2;
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	appearance: none;
+	background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' stroke='%2307222b' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+	background-repeat: no-repeat;
+	background-position: right 12px center;
+}
+
+/* improve option font-size (note: colors on options may be platform-limited) */
+.card-select option {
+	font-size: 15px;
+}
+
+/* ensure select keeps nice focus ring like inputs */
+.card-select:focus {
+	outline: none;
+	box-shadow: 0 0 0 4px rgba(7,34,43,0.06);
+	border-color: rgba(7,34,43,0.16);
+}
+
+/* smaller select variant for activity completion control */
+.activity-complete-select {
+	width: 160px;
+}
+
+@media (max-width: 700px) {
+	.activity-complete-select {
+		width: 100%;
+	}
+}
+
+/* activity actions: date + checkbox inline on desktop, stacked on mobile */
+.activity-actions { display: flex; gap: 8px; align-items: center; }
+.activity-actions label { margin: 0; }
+.activity-actions input[type="checkbox"] { width: 18px; height: 18px; }
+
+@media (max-width: 700px) {
+	.activity-actions { flex-direction: column; align-items: flex-start; }
+}
+
 /* Card wrapper for auth pages */
 .auth-section {
 	/* keep the section full-bleed but do not center the card itself */
@@ -584,6 +636,44 @@ nav a:hover, nav a:focus {
 	/* typography for better readability */
 	font-size: 16px;
 	line-height: 1.45;
+}
+
+/* slide-in from left when opening */
+.modal-content.card-modal.enter {
+	animation: slideInFromLeft 360ms cubic-bezier(.2,.9,.2,1) both;
+}
+
+/* slide-out to right when closing after completion */
+.modal-content.card-modal.exit {
+	animation: slideOutToRight 360ms cubic-bezier(.2,.9,.2,1) both;
+}
+
+@keyframes slideInFromLeft {
+	0% { transform: translateX(-18%); opacity: 0 }
+	100% { transform: translateX(0); opacity: 1 }
+}
+
+@keyframes slideOutToRight {
+	0% { transform: translateX(0); opacity: 1 }
+	100% { transform: translateX(18%); opacity: 0 }
+}
+
+/* activity item exit animation (slide to right + fade) */
+.activity-item.exit {
+	animation: slideOutItem 360ms cubic-bezier(.2,.9,.2,1) both;
+}
+
+@keyframes slideOutItem {
+	0% { transform: translateX(0); opacity: 1 }
+	100% { transform: translateX(26%); opacity: 0 }
+}
+/* animate the action controls (date + checkbox) sliding in from left when modal opens */
+.activity-actions.animate-in {
+    animation: slideInFromLeft 360ms cubic-bezier(.2,.9,.2,1) both;
+}
+/* animate the whole activity item sliding in from left when the modal opens */
+.activity-item.animate-in {
+    animation: slideInFromLeft 360ms cubic-bezier(.2,.9,.2,1) both;
 }
 .modal-content.card-modal h3 {
 	margin: 4px 0 6px;
