@@ -10,10 +10,11 @@ router.get('/', async (req, res) => {
 
 // POST /api/todos
 router.post('/', async (req, res) => {
-  const { title, description, name, recurring, weekdays, dueDate, color } = req.body;
+  const { title, description, name, recurring, weekdays, dueDate, color, parentId } = req.body;
   const todo = new Todo({
     title,
     description: description || '',
+    parentId: parentId || null,
     name: name || '',
     recurring: !!recurring,
     weekdays: Array.isArray(weekdays) ? weekdays : [],

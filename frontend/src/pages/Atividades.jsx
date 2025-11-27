@@ -49,38 +49,71 @@ export default function Atividades() {
   const [removingId, setRemovingId] = useState(null)
   const [viewCard, setViewCard] = useState(null)
   const [exitingIds, setExitingIds] = useState(new Set())
+  const [pendingIds, setPendingIds] = useState(new Set())
+  const [optimisticCompletedIds, setOptimisticCompletedIds] = useState(new Set())
+  const [showCompletedModal, setShowCompletedModal] = useState(false)
+  const [completedActivities, setCompletedActivities] = useState([])
+  const [recoveringIds, setRecoveringIds] = useState(new Set())
+  const [completedPage, setCompletedPage] = useState(1)
+  const [completedPageSize] = useState(8)
 
   // update activity completion state
   async function updateActivityCompletion(id, completed) {
     try {
       if (completed) {
-        // animate out first
-        setExitingIds(prev => {
+        // mark as pending first (delay before playing exit animation)
+        // mark optimistically as completed so the checkbox appears checked immediately
+        setOptimisticCompletedIds(prev => {
           const copy = new Set(prev)
           copy.add(id)
           return copy
         })
-        // after animation, persist and save log
-        setTimeout(async () => {
-          try {
-            const res = await updateTodo(id, { completed: true })
-            if (res && (res.status === 200 || res.ok)) {
-              const t = await fetchTodos()
-              setTodos(Array.isArray(t) ? t : [])
-              const all = Array.isArray(t) ? t : []
-              const act = all.find(x => String(x._id) === String(id))
-              saveCompletedActivity(act)
+        setPendingIds(prev => {
+          const copy = new Set(prev)
+          copy.add(id)
+          return copy
+        })
+        // wait 1s, then start exit animation, then persist after animation duration
+        setTimeout(() => {
+          // remove from pending and add to exiting (triggers exit animation)
+          setPendingIds(prev => {
+            const copy = new Set(prev)
+            copy.delete(id)
+            return copy
+          })
+          setExitingIds(prev => {
+            const copy = new Set(prev)
+            copy.add(id)
+            return copy
+          })
+
+          // after exit animation completes, persist and remove from state
+          setTimeout(async () => {
+            try {
+              const res = await updateTodo(id, { completed: true })
+              if (res && (res.status === 200 || res.ok)) {
+                setTodos(prev => Array.isArray(prev) ? prev.filter(x => String(x._id) !== String(id)) : prev)
+                try {
+                  const body = await (res.json ? res.json() : Promise.resolve(null))
+                  if (body && body._id) saveCompletedActivity(body)
+                } catch (_) {}
+              }
+            } catch (err) {
+              console.error(err)
+            } finally {
+              setExitingIds(prev => {
+                const copy = new Set(prev)
+                copy.delete(id)
+                return copy
+              })
+              setOptimisticCompletedIds(prev => {
+                const copy = new Set(prev)
+                copy.delete(id)
+                return copy
+              })
             }
-          } catch (err) {
-            console.error(err)
-          } finally {
-            setExitingIds(prev => {
-              const copy = new Set(prev)
-              copy.delete(id)
-              return copy
-            })
-          }
-        }, 360)
+          }, 420)
+        }, 1500)
       } else {
         // uncheck -> update immediately
         const res = await updateTodo(id, { completed: false })
@@ -106,6 +139,74 @@ export default function Atividades() {
       if (arr.length > 200) arr = arr.slice(0, 200)
       localStorage.setItem(key, JSON.stringify(arr))
     } catch (e) { console.error('Erro ao salvar registro concluído', e) }
+  }
+
+  function loadCompletedActivitiesFromStorage(page = 1) {
+    try {
+      const key = 'completedActivitiesLog'
+      const raw = localStorage.getItem(key)
+      const arr = raw ? JSON.parse(raw) : []
+      const list = Array.isArray(arr) ? arr : []
+      const totalPages = Math.max(1, Math.ceil(list.length / completedPageSize))
+      const clamped = Math.min(Math.max(1, page), totalPages)
+      setCompletedActivities(list)
+      setCompletedPage(clamped)
+    } catch (e) {
+      console.error('Erro ao carregar atividades concluídas', e)
+      setCompletedActivities([])
+      setCompletedPage(1)
+    }
+  }
+
+  function openCompletedModal() {
+    loadCompletedActivitiesFromStorage(1)
+    setShowCompletedModal(true)
+  }
+
+  function closeCompletedModal() {
+    setShowCompletedModal(false)
+  }
+
+  function formatCompletedAt(iso) {
+    try {
+      const d = new Date(iso)
+      return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    } catch (_) {
+      return iso
+    }
+  }
+
+  async function recoverCompletedActivity(record) {
+    if (!record || !record.id || !record.cardId) return
+    const id = record.id
+    const cardId = record.cardId
+    setRecoveringIds(prev => { const copy = new Set(prev); copy.add(id); return copy })
+    try {
+      // attempt to mark the original todo as not completed and ensure parentId is set
+      const res = await updateTodo(id, { completed: false, parentId: cardId })
+        if (res && (res.status === 200 || res.ok)) {
+        // remove from local log
+        try {
+          const key = 'completedActivitiesLog'
+          const raw = localStorage.getItem(key)
+          const arr = raw ? JSON.parse(raw) : []
+          const filtered = Array.isArray(arr) ? arr.filter(a => String(a.id) !== String(id)) : []
+          localStorage.setItem(key, JSON.stringify(filtered))
+          // refresh modal list and main todos
+            loadCompletedActivitiesFromStorage(completedPage)
+          const t = await fetchTodos()
+          setTodos(Array.isArray(t) ? t : [])
+        } catch (e) {
+          console.error('Erro ao atualizar o registro local após recuperação', e)
+        }
+      } else {
+        console.error('Falha ao recuperar atividade', res)
+      }
+    } catch (err) {
+      console.error('Erro ao recuperar atividade', err)
+    } finally {
+      setRecoveringIds(prev => { const copy = new Set(prev); copy.delete(id); return copy })
+    }
   }
 
   useEffect(() => {
@@ -311,7 +412,10 @@ export default function Atividades() {
             </form>
           )}
           {!showForm && !showCardForm && (
-            <button className="btn" onClick={() => { setShowForm(true); setShowCardForm(false); if (cards && cards.length > 0) setSelectedCardId(cards[0]._id); }} disabled={!(hasAnyActivity || (cards && cards.length > 0))}>Nova atividade</button>
+            <>
+              <button className="btn" onClick={() => { setShowForm(true); setShowCardForm(false); if (cards && cards.length > 0) setSelectedCardId(cards[0]._id); }} disabled={!(hasAnyActivity || (cards && cards.length > 0))}>Nova atividade</button>
+              <button type="button" className="btn secondary" onClick={openCompletedModal} style={{ marginLeft: 8 }}>Atividades concluídas</button>
+            </>
           )}
           {showForm && (
             <form onSubmit={handleCreate} style={{ marginTop: 12 }} className="auth-form card-mini-form">
@@ -393,6 +497,75 @@ export default function Atividades() {
             ))}
           </div>
         )}
+        {showCompletedModal && (
+          <div className="modal-overlay" onClick={closeCompletedModal}>
+            <div className="modal-content card-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 720 }}>
+              <button className="modal-close" onClick={closeCompletedModal}>×</button>
+              <h3 style={{ marginTop: 0 }}>Atividades concluídas</h3>
+              <p className="muted">Registros locais de atividades concluídas (últimas 200)</p>
+              <hr />
+              {(!completedActivities || completedActivities.length === 0) ? (
+                <p className="muted">Nenhuma atividade concluída registrada.</p>
+              ) : (
+                (() => {
+                  // deduplicate by id (or completedAt fallback) to avoid accidental duplicates
+                  const seen = new Map()
+                  for (const it of (completedActivities || [])) {
+                    const key = it.id || it.completedAt || JSON.stringify(it)
+                    if (!seen.has(key)) seen.set(key, it)
+                  }
+                  const unique = Array.from(seen.values())
+                  const total = unique.length
+                  const totalPages = Math.max(1, Math.ceil(total / completedPageSize))
+                  const start = (completedPage - 1) * completedPageSize
+                  const pageItems = unique.slice(start, start + completedPageSize)
+                  return (
+                    <div>
+                      <ul style={{ padding: 0, listStyle: 'none', margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {pageItems.map((a, idx) => {
+                          const cardObj = a.cardId ? cards.find(c => String(c._id) === String(a.cardId)) : null
+                          const cardTitle = cardObj ? cardObj.title : (a.cardId || '—')
+                          const cardColor = cardObj ? (cardObj.color || '#000') : '#000'
+                          return (
+                            <li key={a.id || (completedPage+'-'+idx)} style={{ padding: 10, borderRadius: 8, background: 'rgba(0,0,0,0.03)', display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontWeight: 700 }}>{a.title}</div>
+                                <div className="muted" style={{ fontSize: 13 }}>{a.description || ''}</div>
+                                <div className="muted" style={{ fontSize: 12, marginTop: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                                    <span className="card-dot" style={{ background: cardColor }} />
+                                    <span>Cartão: {cardTitle}</span>
+                                  </span>
+                                </div>
+                              </div>
+                              <div style={{ whiteSpace: 'nowrap', textAlign: 'right', minWidth: 160 }}>
+                                <div style={{ fontSize: 13, fontWeight: 700 }}>{formatCompletedAt(a.completedAt)}</div>
+                                {cardObj && (
+                                  <div style={{ marginTop: 8 }}>
+                                    <button className="btn" type="button" onClick={() => recoverCompletedActivity(a)} disabled={recoveringIds.has(a.id)} style={{ padding: '6px 10px', fontSize: 13 }}>
+                                      {recoveringIds.has(a.id) ? 'Recuperando...' : 'Recuperar'}
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
+                        <div className="muted">Página {completedPage} de {totalPages} — {total} registros</div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button className="btn secondary" onClick={() => loadCompletedActivitiesFromStorage(Math.max(1, completedPage - 1))} disabled={completedPage <= 1}>Anterior</button>
+                          <button className="btn" onClick={() => loadCompletedActivitiesFromStorage(Math.min(totalPages, completedPage + 1))} disabled={completedPage >= totalPages}>Próxima</button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })()
+              )}
+            </div>
+          </div>
+        )}
         {/* Card view modal: shows activities that belong to this card (by matching name === card.title) */}
         {viewCard && (
             <div className="modal-overlay" onClick={() => { setViewCard(null) }}>
@@ -403,35 +576,52 @@ export default function Atividades() {
               <hr />
               <h4>Atividades relacionadas</h4>
               {(() => {
-                // collect related activities for this card (prefer parentId, fallback to name match)
+                // collect related activities for this card (prefer parentId, fallback to name match only when parentId is null)
+                const viewCardId = String(viewCard._id)
                 const related = todos.filter(x => {
+                  // only consider items that look like activities (not cards)
+                  const hasName = x.name && String(x.name).trim().length > 0
+                  const hasRecurring = !!x.recurring
+                  const hasWeekdays = Array.isArray(x.weekdays) && x.weekdays.length > 0
+                  const hasDue = !!x.dueDate
+                  const isActivity = hasName || hasRecurring || hasWeekdays || hasDue
+                  if (!isActivity) return false
+
+                  // prefer explicit parentId matching
                   try {
-                    if (x.parentId && String(x.parentId) === String(viewCard._id)) return true
+                    if (x.parentId && String(x.parentId) === viewCardId) return true
                   } catch (_) {}
-                  if (x.name && String(x.name).trim() === String(viewCard.title).trim()) return true
+
+                  // fallback: only match by name when there is no parentId stored
+                  if ((!x.parentId || x.parentId === null) && hasName && String(x.name).trim() === String(viewCard.title).trim()) return true
                   return false
-                }).filter(r => !r.completed) // only show not-yet-completed activities
+                }).filter(r => !r.completed)
                 if (!related || related.length === 0) {
                   return <p className="muted">Nenhuma atividade neste cartão.</p>
                 }
                 return (
                   <ul style={{ padding: 0, listStyle: 'none', margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {related.map(r => (
-                        <li key={r._id} className={"activity-item" + (exitingIds.has(r._id) ? ' exit' : '') + (viewCard ? ' animate-in' : '')} style={{ padding: 10, borderRadius: 8, background: 'rgba(0,0,0,0.03)' }}>
+                    {related.map(r => {
+                      const isExiting = exitingIds.has(r._id)
+                      const isPending = pendingIds.has(r._id)
+                      const entering = viewCard && !isExiting && !isPending
+                      return (
+                        <li key={r._id} className={"activity-item" + (isExiting ? ' exit' : '') + (entering ? ' animate-in' : '')} style={{ padding: 10, borderRadius: 8, background: 'rgba(0,0,0,0.03)' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
                             <div style={{ flex: 1 }}>
                               <div style={{ fontWeight: 700 }}>{r.title}</div>
                               <div className="muted" style={{ fontSize: 13 }}>{r.description || ''}</div>
                             </div>
-                            <div className={"activity-actions" + (viewCard ? ' animate-in' : '')} style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <div className={"activity-actions" + (entering ? ' animate-in' : '')} style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                               <div className="muted" style={{ fontSize: 13 }}>{r.dueDate ? new Date(r.dueDate).toLocaleString() : ''}</div>
                               <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                                <input type="checkbox" aria-label={`Marcar ${r.title} como concluída`} checked={!!r.completed} disabled={exitingIds.has(r._id)} onChange={e => { updateActivityCompletion(r._id, e.target.checked); }} />
+                                <input type="checkbox" aria-label={`Marcar ${r.title} como concluída`} checked={!!r.completed || optimisticCompletedIds.has(r._id)} disabled={isExiting || isPending} onChange={e => { updateActivityCompletion(r._id, e.target.checked); }} />
                               </label>
                             </div>
                           </div>
                         </li>
-                      ))}
+                      )
+                    })}
                   </ul>
                 )
               })()}
