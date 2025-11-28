@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { fetchTodos, createTodo, updateTodo, deleteTodo, getMe } from '../api'
+import { toast } from 'react-toastify'
 
 export default function Atividades() {
   function hexToRgba(hex, alpha = 1) {
@@ -39,12 +40,11 @@ export default function Atividades() {
   const [recurring, setRecurring] = useState(false)
   const [weekdays, setWeekdays] = useState([])
   const [dueDate, setDueDate] = useState('')
-  const [formMsg, setFormMsg] = useState(null)
-  const [cardMsg, setCardMsg] = useState(null)
+  
   const [editingCard, setEditingCard] = useState(null)
   const [editingTitle, setEditingTitle] = useState('')
   const [editingDesc, setEditingDesc] = useState('')
-  const [editingMsg, setEditingMsg] = useState(null)
+  
   const [editingLoading, setEditingLoading] = useState(false)
   const [removingId, setRemovingId] = useState(null)
   const [viewCard, setViewCard] = useState(null)
@@ -96,6 +96,8 @@ export default function Atividades() {
                 try {
                   const body = await (res.json ? res.json() : Promise.resolve(null))
                   if (body && body._id) saveCompletedActivity(body)
+                  // notify user
+                  try { toast.success('Atividade concluída') } catch (_) {}
                 } catch (_) {}
               }
             } catch (err) {
@@ -134,7 +136,19 @@ export default function Atividades() {
       const raw = localStorage.getItem(key)
       let arr = []
       try { arr = raw ? JSON.parse(raw) : [] } catch (_) { arr = [] }
-      arr.unshift({ id: activity._id, title: activity.title, description: activity.description || '', completedAt: new Date().toISOString(), cardId: activity.parentId || null })
+      // capture a small snapshot of the card (title + color) so completed records remain meaningful
+      const cardId = activity.parentId || null
+      let cardTitle = null
+      let cardColor = null
+      try {
+        const cardObj = todos && Array.isArray(todos) ? todos.find(c => String(c._id) === String(cardId)) : null
+        if (cardObj) {
+          cardTitle = cardObj.title || null
+          cardColor = cardObj.color || null
+        }
+      } catch (_) {}
+
+      arr.unshift({ id: activity._id, title: activity.title, description: activity.description || '', completedAt: new Date().toISOString(), cardId, cardTitle, cardColor })
       // keep reasonable length
       if (arr.length > 200) arr = arr.slice(0, 200)
       localStorage.setItem(key, JSON.stringify(arr))
@@ -147,6 +161,21 @@ export default function Atividades() {
       const raw = localStorage.getItem(key)
       const arr = raw ? JSON.parse(raw) : []
       const list = Array.isArray(arr) ? arr : []
+      // backfill missing cardTitle/cardColor when possible (card still exists)
+      let changed = false
+      try {
+        for (const it of list) {
+          if (it && it.cardId && !it.cardTitle) {
+            const cardObj = cards && Array.isArray(cards) ? cards.find(c => String(c._id) === String(it.cardId)) : null
+            if (cardObj) {
+              it.cardTitle = cardObj.title || null
+              it.cardColor = cardObj.color || null
+              changed = true
+            }
+          }
+        }
+        if (changed) localStorage.setItem(key, JSON.stringify(list))
+      } catch (_) {}
       const totalPages = Math.max(1, Math.ceil(list.length / completedPageSize))
       const clamped = Math.min(Math.max(1, page), totalPages)
       setCompletedActivities(list)
@@ -196,14 +225,17 @@ export default function Atividades() {
             loadCompletedActivitiesFromStorage(completedPage)
           const t = await fetchTodos()
           setTodos(Array.isArray(t) ? t : [])
+            try { toast.success('Atividade recuperada') } catch (_) {}
         } catch (e) {
           console.error('Erro ao atualizar o registro local após recuperação', e)
         }
       } else {
-        console.error('Falha ao recuperar atividade', res)
+          console.error('Falha ao recuperar atividade', res)
+          try { toast.error('Falha ao recuperar atividade') } catch (_) {}
       }
     } catch (err) {
       console.error('Erro ao recuperar atividade', err)
+        try { toast.error('Erro ao recuperar atividade') } catch (_) {}
     } finally {
       setRecoveringIds(prev => { const copy = new Set(prev); copy.delete(id); return copy })
     }
@@ -234,6 +266,7 @@ export default function Atividades() {
         setTodos(Array.isArray(t) ? t : [])
       } catch (e) {
         setErr('Falha ao carregar atividades')
+        try { toast.error('Falha ao carregar atividades') } catch (_) {}
       } finally {
         setLoading(false)
       }
@@ -271,16 +304,15 @@ export default function Atividades() {
 
   async function saveEditing() {
     if (!editingCard) return
-    setEditingMsg(null)
     if (!editingTitle || String(editingTitle).trim() === '') {
-      setEditingMsg('Preencha o título')
+      toast.error('Preencha o título')
       return
     }
     setEditingLoading(true)
     try {
       const res = await updateTodo(editingCard._id, { title: editingTitle, description: editingDesc })
       if (res && (res.status === 200 || res.ok)) {
-        setEditingMsg('Alterações salvas com sucesso')
+        toast.success('Alterações salvas com sucesso')
         const t = await fetchTodos()
         setTodos(Array.isArray(t) ? t : [])
         // fechar modal após breve delay para o usuário ver a confirmação
@@ -288,7 +320,7 @@ export default function Atividades() {
           setEditingCard(null)
           setEditingTitle('')
           setEditingDesc('')
-          setEditingMsg(null)
+          // editingMsg no longer used; toast already shown
         }, 900)
       } else {
         let text = 'Erro ao salvar alterações'
@@ -296,11 +328,11 @@ export default function Atividades() {
           const body = await res.json()
           if (body && body.error) text = body.error
         } catch (_) {}
-        setEditingMsg(text)
+        toast.error(text)
       }
     } catch (err) {
       console.error(err)
-      setEditingMsg('Erro ao salvar alterações')
+      toast.error('Erro ao salvar alterações')
     } finally {
       setEditingLoading(false)
     }
@@ -314,9 +346,8 @@ export default function Atividades() {
 
   async function handleCreate(e) {
     e.preventDefault()
-    setFormMsg(null)
     if (!title) {
-      setFormMsg('Preencha o título')
+      toast.error('Preencha o título')
       return
     }
     try {
@@ -329,7 +360,7 @@ export default function Atividades() {
       }
       const res = await createTodo(payload)
       if (res && res.status === 201) {
-        setFormMsg('Atividade criada')
+        toast.success('Atividade criada')
         setTitle('')
         setName('')
         setRecurring(false)
@@ -351,18 +382,17 @@ export default function Atividades() {
         if (freshCards.length > 0) setSelectedCardId(freshCards[0]._id)
       } else {
         const body = await res.json()
-        setFormMsg(body.error || 'Erro ao criar atividade')
+        toast.error(body.error || 'Erro ao criar atividade')
       }
     } catch (err) {
-      setFormMsg('Erro na requisição')
+      toast.error('Erro na requisição')
     }
   }
 
   async function handleCreateCard(e) {
     e.preventDefault()
-    setCardMsg(null)
     if (!cardTitle) {
-      setCardMsg('Preencha o título do cartão')
+      toast.error('Preencha o título do cartão')
       return
     }
     try {
@@ -370,7 +400,7 @@ export default function Atividades() {
       const old = todos || []
       const res = await createTodo(payload)
       if (res && res.status === 201) {
-        setCardMsg('Cartão criado')
+        toast.success('Cartão criado')
         setCardTitle('')
         setCardDesc('')
         setCardColor('#000000')
@@ -380,10 +410,10 @@ export default function Atividades() {
         // novo cartão criado — o estilo padrão `empty-card` já aplica animação sutil
       } else {
         const body = await res.json()
-        setCardMsg(body.error || 'Erro ao criar cartão')
+        toast.error(body.error || 'Erro ao criar cartão')
       }
     } catch (err) {
-      setCardMsg('Erro na requisição')
+      toast.error('Erro na requisição')
     }
   }
 
@@ -399,7 +429,7 @@ export default function Atividades() {
                 <div style={{ display: 'flex', gap: 8, marginTop: 12, alignItems: 'center' }}>
                   <button className="btn" onClick={saveEditing} disabled={editingLoading}>{editingLoading ? 'Salvando...' : 'Salvar'}</button>
                   <button className="btn secondary" onClick={cancelEditing} disabled={editingLoading}>Cancelar</button>
-                  {editingMsg && <p className="message" style={{ margin: 0 }}>{editingMsg}</p>}
+                  {/* editing messages are shown via toasts now */}
                 </div>
               </div>
             </div>
@@ -424,7 +454,7 @@ export default function Atividades() {
                 <button className="btn" type="submit">Criar cartão</button>
                 <button type="button" className="btn secondary" onClick={() => setShowCardForm(false)}>Cancelar</button>
               </div>
-              {cardMsg && <p className="message">{cardMsg}</p>}
+              {/* card messages are shown via toasts now */}
             </form>
           )}
           {!showForm && !showCardForm && (
@@ -468,20 +498,25 @@ export default function Atividades() {
                 <button className="btn" type="submit">Criar</button>
                 <button type="button" className="btn secondary" onClick={() => setShowForm(false)}>Cancelar</button>
               </div>
-              {formMsg && <p className="message">{formMsg}</p>}
+              {/* form messages are shown via toasts now */}
             </form>
           )}
         </div>
         <h2>Atividades</h2>
         {loading && <p className="muted">Carregando...</p>}
-        {err && <p className="message">{err}</p>}
+        {/* errors are shown via toasts now */}
 
         {cards.length === 0 ? (
           <p className="muted">Nenhum cartão encontrado.</p>
         ) : (
           <div style={{ display: 'grid', gap: 12 }}>
-            {cards.map(t => (
-              <div key={t._id} onClick={() => setViewCard(t)} className={"example-card compact empty-card " + (t.color ? 'colored ' : '') + (removingId === t._id ? ' removing' : '')} style={{ background: t.color || undefined, color: t.color ? '#fff' : undefined, ['--card-color']: t.color || '#000' }}>
+            {cards.map((t, idx) => (
+              <div
+                key={t._id}
+                onClick={() => setViewCard(t)}
+                className={`example-card compact empty-card ${t.color ? 'colored' : ''} ${removingId === t._id ? ' removing' : ''} animate-in`}
+                style={{ background: t.color || undefined, color: t.color ? '#fff' : undefined, ['--card-color']: t.color || '#000', animationDelay: `${idx * 80}ms` }}
+              >
                 <div className="ec-left">
                   <span className="ec-title">{t.title}</span>
                   <span className="ec-sub muted">{t.description && String(t.description).trim().length > 0 ? t.description : (t.completed ? 'Concluída' : 'Sem descrição')}</span>
@@ -540,8 +575,9 @@ export default function Atividades() {
                       <ul style={{ padding: 0, listStyle: 'none', margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
                         {pageItems.map((a, idx) => {
                           const cardObj = a.cardId ? cards.find(c => String(c._id) === String(a.cardId)) : null
-                          const cardTitle = cardObj ? cardObj.title : (a.cardId || '—')
-                          const cardColor = cardObj ? (cardObj.color || '#000') : '#000'
+                          // Prefer snapshot from the completed record (cardTitle/cardColor) when present
+                          const cardTitle = a.cardTitle || (cardObj ? cardObj.title : (a.cardId ? '—' : '—'))
+                          const cardColor = a.cardColor || (cardObj ? (cardObj.color || '#000') : '#000')
                           return (
                             <li key={a.id || (completedPage+'-'+idx)} style={{ padding: 10, borderRadius: 8, background: 'rgba(0,0,0,0.03)', display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
                               <div style={{ flex: 1 }}>

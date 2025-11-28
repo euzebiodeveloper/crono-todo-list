@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getMe, resetPassword, fetchTodos } from '../api'
+import { toast } from 'react-toastify'
 
 export default function Dashboard({ onLogout }) {
   const navigate = useNavigate()
@@ -26,12 +27,37 @@ export default function Dashboard({ onLogout }) {
         setTodos(Array.isArray(t) ? t : [])
       } catch (e) {
         setErr('Falha ao carregar dados')
+        toast.error('Falha ao carregar dados')
       } finally {
         setLoading(false)
       }
     }
     load()
   }, [])
+
+  // show welcome toast once after a fresh login
+  useEffect(() => {
+    try {
+      const just = sessionStorage.getItem('justLoggedIn')
+      if (just === 'true') {
+        if (user && user.name) toast.success(`Bem-vindo, ${user.name}`)
+        else toast.success('Bem-vindo')
+        sessionStorage.removeItem('justLoggedIn')
+      }
+    } catch (e) {
+      // ignore sessionStorage errors
+    }
+  }, [user])
+
+  function translateServerMessage(msg) {
+    if (!msg) return msg
+    const m = String(msg)
+    // known english -> pt-BR translations
+    if (m === 'Current password is incorrect') return 'Senha atual incorreta'
+    if (m === 'Invalid current password') return 'Senha atual inválida'
+    // fallback: return original message (may already be Portuguese)
+    return msg
+  }
 
   function handleLogout() {
     if (onLogout) onLogout()
@@ -44,26 +70,35 @@ export default function Dashboard({ onLogout }) {
     // client-side validation
     if (!currentPassword || !newPassword || !confirmPassword) {
       setResetMsg('Preencha todos os campos de senha')
+      toast.error('Preencha todos os campos de senha')
       return
     }
     if (newPassword !== confirmPassword) {
       setResetMsg('A nova senha e a confirmação não coincidem')
+      toast.error('A nova senha e a confirmação não coincidem')
       return
     }
     try {
       const res = await resetPassword({ currentPassword, newPassword })
       if (res && res.ok) {
-        setResetMsg('Senha atualizada com sucesso')
+        const successMsg = 'Senha atualizada com sucesso'
+        setResetMsg(successMsg)
+        toast.success(successMsg)
         setCurrentPassword('')
         setNewPassword('')
         setConfirmPassword('')
       } else if (res && res.error) {
-        setResetMsg(res.error)
+        const translated = translateServerMessage(res.error)
+        setResetMsg(translated)
+        toast.error(translated)
       } else {
-        setResetMsg('Erro ao atualizar senha')
+        const fallback = 'Erro ao atualizar senha'
+        setResetMsg(fallback)
+        toast.error(fallback)
       }
     } catch (err) {
       setResetMsg('Erro na solicitação')
+      toast.error('Erro na solicitação')
     }
   }
 
@@ -92,7 +127,6 @@ export default function Dashboard({ onLogout }) {
             <input type="password" placeholder="Nova senha" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
             <input type="password" placeholder="Confirmar nova senha" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
             <button className="btn" type="submit">Atualizar senha</button>
-            {resetMsg && <p className="message">{resetMsg}</p>}
           </form>
         </div>
 

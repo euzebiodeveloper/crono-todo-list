@@ -398,6 +398,18 @@ nav a:hover, nav a:focus {
 	align-self: flex-start; /* prevents stretch in column flex containers */
 }
 
+/* slide-in-from-left animation for cards on load */
+@keyframes slideInFromLeft {
+  from { opacity: 0; transform: translateX(-18px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.example-card.animate-in {
+  animation-name: slideInFromLeft;
+  animation-duration: 420ms;
+  animation-timing-function: cubic-bezier(.2,.9,.3,1);
+  animation-fill-mode: both;
+}
+
 /* indicate the whole card is clickable */
 .example-card { cursor: pointer; }
 
@@ -481,9 +493,9 @@ nav a:hover, nav a:focus {
 	border-radius: inherit;
 	/* three stacked SVG waves (top -> bottom). Topmost is most opaque. */
 	background-image:
-		url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='none' viewBox='0 0 140 90'><path d='M0 68 C28 8 56 108 84 68 C112 28 140 68 140 68 L140 90 L0 90 Z' fill='rgba(255,255,255,0.36)'/></svg>"),
-		url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='none' viewBox='0 0 140 90'><path d='M0 70 C28 10 56 110 84 70 C112 30 140 70 140 70 L140 90 L0 90 Z' fill='rgba(255,255,255,0.26)'/></svg>"),
-		url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='none' viewBox='0 0 140 90'><path d='M0 72 C28 12 56 112 84 72 C112 32 140 72 140 72 L140 90 L0 90 Z' fill='rgba(255,255,255,0.16)'/></svg>");
+		url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='none' viewBox='0 0 140 90'><path d='M0 68 C28 8 56 108 84 68 C112 28 140 68 140 68 L140 90 L0 90 Z' fill='rgba(255,255,255,0.34)'/></svg>"),
+		url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='none' viewBox='0 0 140 90'><path d='M0 70 C28 10 56 110 84 70 C112 30 140 70 140 70 L140 90 L0 90 Z' fill='rgba(255,255,255,0.32)'/></svg>"),
+		url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='none' viewBox='0 0 140 90'><path d='M0 72 C28 12 56 112 84 72 C112 32 140 72 140 72 L140 90 L0 90 Z' fill='rgba(255,255,255,0.30)'/></svg>");
 	background-repeat: no-repeat, no-repeat, no-repeat;
 	/* sizes: make waves significantly taller to increase vertical separation */
 	background-size: 100% 120%, 100% 300%, 100% 200%;

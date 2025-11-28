@@ -10,7 +10,22 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 router.post('/register', async (req, res) => {
   try {
     const { name, email, password } = req.body;
-    if (!name || !email || !password) return res.status(400).json({ error: 'Missing fields' });
+
+    // collect missing fields to return structured response
+    const missing = []
+    if (!name) missing.push('name')
+    if (!email) missing.push('email')
+    if (!password) missing.push('password')
+    if (missing.length) return res.status(400).json({ error: 'Missing fields', missingFields: missing })
+
+    // basic validations
+    if (String(name).trim().length < 2) return res.status(400).json({ error: 'Nome deve ter pelo menos 2 caracteres' })
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(String(email).toLowerCase())) return res.status(400).json({ error: 'Email inválido' })
+
+    // strong password: min 8 chars, at least 1 lowercase, 1 uppercase, 1 special char
+    const strongPw = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/
+    if (!strongPw.test(String(password))) return res.status(400).json({ error: 'Senha fraca: mínimo 8 caracteres, incluindo letras maiúsculas, minúsculas e caracteres especiais' })
 
     const existing = await User.findOne({ email });
     if (existing) return res.status(409).json({ error: 'Email já cadastrado' });
@@ -82,11 +97,21 @@ router.get('/me', authMiddleware, async (req, res) => {
 router.post('/reset-password', authMiddleware, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
-    if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Missing fields' });
+    const missing = []
+    if (!currentPassword) missing.push('currentPassword')
+    if (!newPassword) missing.push('newPassword')
+    if (missing.length) return res.status(400).json({ error: 'Missing fields', missingFields: missing })
+
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ error: 'User not found' });
+
     const valid = await bcrypt.compare(currentPassword, user.passwordHash);
-    if (!valid) return res.status(401).json({ error: 'Current password is incorrect' });
+    if (!valid) return res.status(401).json({ error: 'Senha atual incorreta' });
+
+    // enforce strong new password
+    const strongPw = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/
+    if (!strongPw.test(String(newPassword))) return res.status(400).json({ error: 'Senha fraca: mínimo 8 caracteres, incluindo letras maiúsculas, minúsculas e caracteres especiais' })
+
     const salt = await bcrypt.genSalt(10);
     user.passwordHash = await bcrypt.hash(newPassword, salt);
     await user.save();

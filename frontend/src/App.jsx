@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom'
+import { toast } from 'react-toastify'
 import Home from './pages/Home'
 import About from './pages/About'
 import Login from './pages/Login'
@@ -19,6 +20,7 @@ export default function App() {
       localStorage.removeItem('token')
       setIsAuthenticated(false)
       setMenuOpen(false)
+      try { toast.info('Você saiu da conta') } catch (_) {}
       navigate('/')
     }
     return (
@@ -89,7 +91,7 @@ export default function App() {
             <Route path="/about" element={<About />} />
             <Route path="/login" element={<Login onAuth={(token) => { localStorage.setItem('token', token); setIsAuthenticated(true); }} />} />
             <Route path="/register" element={<Register onAuth={(token) => { localStorage.setItem('token', token); setIsAuthenticated(true); }} />} />
-            <Route path="/dashboard" element={<Dashboard onLogout={() => { localStorage.removeItem('token'); setIsAuthenticated(false); }} />} />
+            <Route path="/dashboard" element={<Dashboard onLogout={() => { localStorage.removeItem('token'); setIsAuthenticated(false); try { toast.info('Você saiu da conta') } catch (_) {} }} />} />
             <Route path="/atividades" element={<Atividades />} />
           </Routes>
         </main>
