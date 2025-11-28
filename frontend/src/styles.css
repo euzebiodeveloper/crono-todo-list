@@ -387,6 +387,7 @@ nav a:hover, nav a:focus {
 	box-shadow: 0 8px 20px rgba(10,41,60,0.06);
 	transition: transform .18s ease, box-shadow .18s ease, background .18s ease, color .12s ease;
 	overflow: hidden;
+	will-change: transform;
 	/* make header fixed-like on mobile too (stick to top) */
 	.site-header { position: sticky; top: 0; }
 	position: relative;
@@ -397,6 +398,19 @@ nav a:hover, nav a:focus {
 	min-height: 140px; /* increased to fit larger typography */
 	align-self: flex-start; /* prevents stretch in column flex containers */
 }
+    
+		/* elevated style applied while a card is sliding (FLIP moving) */
+		.example-card.moving {
+			box-shadow: 0 26px 54px rgba(2,8,12,0.26);
+			transform-origin: center;
+			border-radius: 12px;
+		}
+
+		/* while a card is moving (FLIP), disable the entrance animation to avoid
+			 lateral slide or flicker; the FLIP transform handles the visual movement */
+		.example-card.moving.animate-in {
+			animation: none !important;
+		}
 
 /* slide-in-from-left animation for cards on load */
 @keyframes slideInFromLeft {
@@ -404,10 +418,10 @@ nav a:hover, nav a:focus {
   to { opacity: 1; transform: translateX(0); }
 }
 .example-card.animate-in {
-  animation-name: slideInFromLeft;
-  animation-duration: 420ms;
-  animation-timing-function: cubic-bezier(.2,.9,.3,1);
-  animation-fill-mode: both;
+	animation-name: slideInFromLeft;
+	animation-duration: 360ms;
+	animation-timing-function: cubic-bezier(.2,.9,.2,1);
+	animation-fill-mode: both;
 }
 
 /* indicate the whole card is clickable */
@@ -510,6 +524,9 @@ nav a:hover, nav a:focus {
 
 /* compact variant adjusted to match larger typography */
 .example-card.compact { min-height: 120px; padding: 12px 20px; }
+
+/* priority dash removed: the card's `::after` animated left border (which
+   uses `--card-color` and `--card-urgency-color`) now shows urgency. */
 
 /* small floating/breathing animation to draw attention for high urgency */
 @keyframes floatSlow {
@@ -1266,7 +1283,8 @@ input:focus, button:focus, a:focus { outline: 3px solid rgba(10,41,60,0.08); out
 	border-bottom-left-radius: 12px;
 	background: var(--card-color, #000);
 	pointer-events: none;
-	animation: borderPulse 2000ms ease-in-out infinite;
+	/* use CSS variable so pulse timing is easily tunable and consistent */
+	animation: borderPulse var(--border-pulse-duration, 1600ms) ease-in-out infinite;
 }
 
 /* make the card content start immediately after the animated bar (no extra gap) */
@@ -1278,7 +1296,7 @@ input:focus, button:focus, a:focus { outline: 3px solid rgba(10,41,60,0.08); out
 
 @keyframes borderPulse {
 	0% { background: var(--card-color, #000); }
-	50% { background: #fff; }
+	50% { background: var(--card-urgency-color, #fff); }
 	100% { background: var(--card-color, #000); }
 }
 

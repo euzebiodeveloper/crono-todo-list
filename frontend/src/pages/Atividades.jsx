@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { fetchTodos, createTodo, updateTodo, deleteTodo, getMe } from '../api'
 import { toast } from 'react-toastify'
 
@@ -264,6 +264,15 @@ export default function Atividades() {
       try {
         const t = await fetchTodos()
         setTodos(Array.isArray(t) ? t : [])
+        // trigger entrance animation after todos are set, but only on the
+        // first successful load — prevent retriggering during reorders.
+        try {
+          if (!hasRunInitialAnimation.current) {
+            hasRunInitialAnimation.current = true
+            setInitialLoad(true)
+            setTimeout(() => setInitialLoad(false), 120)
+          }
+        } catch (_) {}
       } catch (e) {
         setErr('Falha ao carregar atividades')
         try { toast.error('Falha ao carregar atividades') } catch (_) {}
@@ -297,6 +306,206 @@ export default function Atividades() {
     const hasDue = !!t.dueDate
     return hasName || hasRecurring || hasWeekdays || hasDue
   })
+
+  // Helpers: determine related activities and compute a dash color indicating urgency
+  function getRelatedActivitiesForCard(card) {
+    if (!card) return []
+    const cardId = String(card._id)
+    return todos.filter(x => {
+      const hasName = x.name && String(x.name).trim().length > 0
+      const hasRecurring = !!x.recurring
+      const hasWeekdays = Array.isArray(x.weekdays) && x.weekdays.length > 0
+      const hasDue = !!x.dueDate
+      const isActivity = hasName || hasRecurring || hasWeekdays || hasDue
+      if (!isActivity) return false
+
+      try {
+        if (x.parentId && String(x.parentId) === cardId) return true
+      } catch (_) {}
+
+      if ((!x.parentId || x.parentId === null) && hasName && String(x.name).trim() === String(card.title).trim()) return true
+      return false
+    }).filter(r => !r.completed)
+  }
+
+  function earliestDueDateForCard(card) {
+    const related = getRelatedActivitiesForCard(card)
+    const dates = related.map(r => { try { return r.dueDate ? new Date(r.dueDate) : null } catch (_) { return null } }).filter(d => d instanceof Date && !isNaN(d))
+    if (!dates || dates.length === 0) return null
+    return dates.reduce((min, d) => !min || d < min ? d : min, null)
+  }
+
+  // Compute a small dash color based on time to the nearest due date.
+  // Levels: green (far), yellow (approaching), orange (soon), red (due/overdue).
+  function getCardDashColor(card) {
+    const d = earliestDueDateForCard(card)
+    if (!d) return null
+    const now = new Date()
+    const diffHours = (d - now) / (1000 * 60 * 60)
+    // thresholds (hours): >168 (7d) = green, >72 (3d) = yellow, >0 = orange, <=0 = red
+    if (diffHours <= 0) return '#d62728' // red
+    if (diffHours <= 72) return '#ff7f0e' // orange
+    if (diffHours <= 168) return '#f1c40f' // yellow
+    return '#2ca02c' // green
+  }
+
+  // FLIP animation helpers for reordering cards
+  const cardNodes = useRef(new Map())
+  const prevRects = useRef(new Map())
+  // ensure entrance animation only runs once on first load
+  const hasRunInitialAnimation = useRef(false)
+  // control for initial entrance animation. We'll keep `initialLoad` true
+  // until the todos are loaded so entrance animations run when cards appear.
+  const [initialLoad, setInitialLoad] = useState(true)
+
+  // Entrance animation: apply `animate-in` to each card with a stagger on first load
+  
+
+  // compute sorted cards: those with earliest due dates first; keep original order for cards without dates
+  const sortedCards = React.useMemo(() => {
+    const withIndex = cards.map((c, i) => ({ c, i }))
+    withIndex.sort((a, b) => {
+      const da = earliestDueDateForCard(a.c)
+      const db = earliestDueDateForCard(b.c)
+      if (!da && !db) return a.i - b.i
+      if (!da) return 1
+      if (!db) return -1
+      return da - db
+    })
+    return withIndex.map(x => x.c)
+  }, [cards])
+
+  // Entrance animation: apply `animate-in` to each card with a stagger on first load
+  useEffect(() => {
+    if (!initialLoad) return
+    // programmatically animate from left with stagger (more reliable across renders)
+    const handles = []
+    // run only after refs are populated (poll via rAF up to a few frames)
+    let attempts = 0
+    function run() {
+      sortedCards.forEach((c, i) => {
+        const id = String(c._id)
+        const node = cardNodes.current.get(id)
+        if (!node) return
+        try {
+          // set initial state
+          node.style.transform = 'translateX(-40px)'
+          node.style.opacity = '0'
+          node.style.transition = 'transform 420ms cubic-bezier(.2,.9,.3,1), opacity 420ms'
+          node.style.transitionDelay = `${i * 80}ms`
+          // trigger to final state on next frame
+          requestAnimationFrame(() => {
+            node.style.transform = ''
+            node.style.opacity = '1'
+          })
+          // cleanup after animation
+          const cleanupTimer = setTimeout(() => {
+            try {
+              node.style.transition = ''
+              node.style.transitionDelay = ''
+            } catch (_) {}
+          }, 520 + i * 80)
+          handles.push(cleanupTimer)
+        } catch (_) {}
+      })
+    }
+
+    function waitForRefs() {
+      // if no cards or refs match expected count, run immediately
+      if (sortedCards.length === 0) return
+      if (cardNodes.current.size >= sortedCards.length || attempts > 12) {
+        // apply class-based animation (same as activity items) with staggered delay
+        sortedCards.forEach((c, i) => {
+          const id = String(c._id)
+          const node = cardNodes.current.get(id)
+          if (!node) return
+          try {
+            node.style.animationDelay = `${i * 80}ms`
+            node.classList.add('animate-in')
+            const total = 360 + i * 80 // duration 360ms (match activities) + delay
+            const cleanup = setTimeout(() => {
+              try { node.classList.remove('animate-in') } catch (_) {}
+              try { node.style.animationDelay = '' } catch (_) {}
+            }, total + 80)
+            handles.push(cleanup)
+          } catch (_) {}
+        })
+        return
+      }
+      attempts++
+      requestAnimationFrame(waitForRefs)
+    }
+
+    requestAnimationFrame(waitForRefs)
+    return () => handles.forEach(h => clearTimeout(h))
+  }, [initialLoad, sortedCards.map(c => c._id).join(',')])
+
+  // run FLIP whenever sortedCards order changes
+  useEffect(() => {
+    try {
+      // ensure any entrance animation class is cleared before running FLIP
+      // so the slide-from-left animation doesn't replay during reorders
+      for (const [, node] of cardNodes.current.entries()) {
+        try {
+          if (node && node.classList) {
+            node.classList.remove('animate-in')
+            node.style.animationDelay = ''
+          }
+        } catch (_) {}
+      }
+      // capture new rects
+      const newRects = new Map()
+      for (const [id, node] of cardNodes.current.entries()) {
+        if (!node) continue
+        const r = node.getBoundingClientRect()
+        newRects.set(id, r)
+      }
+
+      // for each card id that existed before, compute delta and animate
+      for (const [id, newRect] of newRects.entries()) {
+        const prev = prevRects.current.get(id)
+        if (!prev) continue
+        const deltaY = prev.top - newRect.top
+        if (deltaY === 0) continue
+        const node = cardNodes.current.get(id)
+        if (!node) continue
+        // invert: place node at old position
+        node.style.transition = 'none'
+        node.style.transform = `translateY(${deltaY}px)`
+        // mark as moving (adds shadow + elevated z-index)
+        node.classList.add('moving')
+        node.style.zIndex = '600'
+        // play the animation to natural position
+        requestAnimationFrame(() => {
+          node.style.transition = 'transform 420ms cubic-bezier(.2,.9,.2,1)'
+          node.style.transform = ''
+        })
+        // cleanup per-node after animation
+        setTimeout(() => {
+          try { node.classList.remove('moving') } catch (_) {}
+          try { node.style.zIndex = '' } catch (_) {}
+          try { node.style.transition = '' } catch (_) {}
+          try { node.style.transform = '' } catch (_) {}
+        }, 480)
+      }
+
+      // after animations, clear inline styles
+      const cleanup = setTimeout(() => {
+        for (const [, node] of cardNodes.current.entries()) {
+          if (node) {
+            node.style.transition = ''
+            node.style.transform = ''
+          }
+        }
+      }, 500)
+
+      // store new rects for next update
+      prevRects.current = newRects
+      return () => clearTimeout(cleanup)
+    } catch (e) {
+      // ignore
+    }
+  }, [sortedCards.map(c => c._id).join(',')])
 
   function toggleWeekday(day) {
     setWeekdays(w => w.includes(day) ? w.filter(x => x !== day) : [...w, day])
@@ -510,42 +719,48 @@ export default function Atividades() {
           <p className="muted">Nenhum cartão encontrado.</p>
         ) : (
           <div style={{ display: 'grid', gap: 12 }}>
-            {cards.map((t, idx) => (
-              <div
-                key={t._id}
-                onClick={() => setViewCard(t)}
-                className={`example-card compact empty-card ${t.color ? 'colored' : ''} ${removingId === t._id ? ' removing' : ''} animate-in`}
-                style={{ background: t.color || undefined, color: t.color ? '#fff' : undefined, ['--card-color']: t.color || '#000', animationDelay: `${idx * 80}ms` }}
-              >
-                <div className="ec-left">
-                  <span className="ec-title">{t.title}</span>
-                  <span className="ec-sub muted">{t.description && String(t.description).trim().length > 0 ? t.description : (t.completed ? 'Concluída' : 'Sem descrição')}</span>
-                </div>
-                <div className="ec-right">
-                  <button className="icon-btn" title="Editar" onClick={(e) => { e.stopPropagation(); setEditingCard(t); setEditingTitle(t.title || ''); setEditingDesc(t.description || '') }}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  </button>
-                  <button className="icon-btn" title="Excluir" onClick={async (e) => { e.stopPropagation(); if (confirm('Excluir este cartão?')) {
-                      try {
-                        setRemovingId(t._id)
-                        const r = await deleteTodo(t._id)
-                        if (r.status === 204 || r.ok) {
-                          const fresh = await fetchTodos()
-                          setTodos(Array.isArray(fresh) ? fresh : [])
-                        } else {
-                          // clear removing indicator after a short delay
-                          setTimeout(() => setRemovingId(null), 600)
+            {sortedCards.map((t, idx) => {
+              const dashColor = getCardDashColor(t)
+              const cardBaseColor = t.color || 'var(--card-color)'
+              const dashTarget = dashColor || null
+              return (
+                <div
+                  key={t._id}
+                  onClick={() => setViewCard(t)}
+                  ref={el => { if (el) cardNodes.current.set(String(t._id), el); else cardNodes.current.delete(String(t._id)) }}
+                  className={`example-card compact empty-card ${t.color ? 'colored' : ''} ${removingId === t._id ? ' removing' : ''}`}
+                  style={{ background: t.color || undefined, color: t.color ? '#fff' : undefined, ['--card-color']: t.color || '#000', ['--card-urgency-color']: dashTarget || '#ffffff' }}
+                >
+                  <div className="ec-left">
+                    <span className="ec-title">{t.title}</span>
+                    <span className="ec-sub muted">{t.description && String(t.description).trim().length > 0 ? t.description : (t.completed ? 'Concluída' : 'Sem descrição')}</span>
+                  </div>
+                  <div className="ec-right">
+                    <button className="icon-btn" title="Editar" onClick={(e) => { e.stopPropagation(); setEditingCard(t); setEditingTitle(t.title || ''); setEditingDesc(t.description || '') }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </button>
+                    <button className="icon-btn" title="Excluir" onClick={async (e) => { e.stopPropagation(); if (confirm('Excluir este cartão?')) {
+                        try {
+                          setRemovingId(t._id)
+                          const r = await deleteTodo(t._id)
+                          if (r.status === 204 || r.ok) {
+                            const fresh = await fetchTodos()
+                            setTodos(Array.isArray(fresh) ? fresh : [])
+                          } else {
+                            // clear removing indicator after a short delay
+                            setTimeout(() => setRemovingId(null), 600)
+                          }
+                        } catch (err) {
+                          console.error(err)
+                          setRemovingId(null)
                         }
-                      } catch (err) {
-                        console.error(err)
-                        setRemovingId(null)
-                      }
-                    } }}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6h18" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M10 11v6M14 11v6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  </button>
+                      } }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6h18" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M10 11v6M14 11v6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
         {showCompletedModal && (
