@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { fetchTodos, createTodo, updateTodo, deleteTodo } from '../api'
+import { fetchTodos, createTodo, updateTodo, deleteTodo, getMe } from '../api'
 
 export default function Atividades() {
   function hexToRgba(hex, alpha = 1) {
@@ -213,6 +213,22 @@ export default function Atividades() {
     async function load() {
       setLoading(true)
       setErr(null)
+      // ensure user is authenticated; if not, redirect to home
+      const token = localStorage.getItem('token')
+      if (!token) {
+        window.location.href = '/'
+        return
+      }
+      try {
+        const me = await getMe()
+        if (!me || me.error) {
+          window.location.href = '/'
+          return
+        }
+      } catch (e) {
+        window.location.href = '/'
+        return
+      }
       try {
         const t = await fetchTodos()
         setTodos(Array.isArray(t) ? t : [])

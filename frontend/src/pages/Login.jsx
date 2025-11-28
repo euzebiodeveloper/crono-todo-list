@@ -1,30 +1,29 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { loginUser } from '../api'
+import { toast } from 'react-toastify'
 
 export default function Login({ onAuth }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [message, setMessage] = useState(null)
   const navigate = useNavigate()
 
   async function handleSubmit(e) {
     e.preventDefault()
-    setMessage(null)
     try {
       const res = await loginUser({ email, password })
       if (res.token) {
         // store token and notify parent
         if (onAuth) onAuth(res.token)
         localStorage.setItem('token', res.token)
-        setMessage('Login realizado com sucesso')
+        toast.success('Login realizado com sucesso')
         navigate('/dashboard')
         return
       }
-      else if (res.error) setMessage(res.error)
-      else setMessage('Resposta inesperada do servidor')
+      else if (res.error) toast.error(res.error)
+      else toast.error('Resposta inesperada do servidor')
     } catch (err) {
-      setMessage('Erro na requisição')
+      toast.error('Erro na requisição')
     }
   }
 
@@ -43,7 +42,7 @@ export default function Login({ onAuth }) {
 
             <button type="submit" className="btn">Entrar</button>
           </form>
-          {message && <p className="message">{message}</p>}
+          
         </div>
       </div>
     </div>
