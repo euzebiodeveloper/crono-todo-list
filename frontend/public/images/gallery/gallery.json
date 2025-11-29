@@ -1,0 +1,7 @@
+[
+  { "file": "cards.webp", "title": "Cartões", "caption": "Organize por cartões", "alt": "Screenshot mostrando cartões" },
+  { "file": "new-card.webp", "title": "Novo Cartão", "caption": "Criando um novo cartão", "alt": "Screenshot do formulário de novo cartão" },
+  { "file": "new-task.webp", "title": "Nova Atividade", "caption": "Adicionando uma atividade", "alt": "Screenshot do formulário de nova atividade" },
+  { "file": "ranks.webp", "title": "Ranqueamento", "caption": "Cartões ranqueados por urgência", "alt": "Screenshot mostrando cartões coloridos por urgência" },
+  { "file": "tasks.webp", "title": "Lista de Atividades", "caption": "Visão geral das atividades", "alt": "Screenshot da lista de atividades" }
+]

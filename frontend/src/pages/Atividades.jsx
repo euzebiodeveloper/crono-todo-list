@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react'
-import { fetchTodos, createTodo, updateTodo, deleteTodo, getMe } from '../api'
+import { fetchTodos, createTodo, updateTodo, deleteTodo, getMe, fetchCompletedActivities } from '../api'
 import { toast } from 'react-toastify'
 
 export default function Atividades() {
@@ -51,6 +51,8 @@ export default function Atividades() {
   const [exitingIds, setExitingIds] = useState(new Set())
   const [pendingIds, setPendingIds] = useState(new Set())
   const [optimisticCompletedIds, setOptimisticCompletedIds] = useState(new Set())
+  const [enteringFromRightIds, setEnteringFromRightIds] = useState(new Set())
+  const [completedExitingIds, setCompletedExitingIds] = useState(new Set())
   const [showCompletedModal, setShowCompletedModal] = useState(false)
   const [completedActivities, setCompletedActivities] = useState([])
   const [recoveringIds, setRecoveringIds] = useState(new Set())
@@ -155,8 +157,31 @@ export default function Atividades() {
     } catch (e) { console.error('Erro ao salvar registro concluído', e) }
   }
 
-  function loadCompletedActivitiesFromStorage(page = 1) {
+  async function loadCompletedActivitiesFromStorage(page = 1) {
     try {
+      // prefer server-side stored completed activities; fall back to localStorage
+      try {
+        const server = await fetchCompletedActivities()
+        if (server && Array.isArray(server)) {
+          const list = server.map(it => ({
+            id: it.originalId || it.id || it._id,
+            title: it.title || '',
+            description: it.description || '',
+            completedAt: it.completedAt ? (new Date(it.completedAt)).toISOString() : new Date().toISOString(),
+            cardId: it.cardId || null,
+            cardTitle: it.cardTitle || null,
+            cardColor: it.cardColor || null
+          }))
+          const totalPages = Math.max(1, Math.ceil(list.length / completedPageSize))
+          const clamped = Math.min(Math.max(1, page), totalPages)
+          setCompletedActivities(list)
+          setCompletedPage(clamped)
+          return
+        }
+      } catch (e) {
+        // server fetch failed — continue to localStorage fallback
+      }
+
       const key = 'completedActivitiesLog'
       const raw = localStorage.getItem(key)
       const arr = raw ? JSON.parse(raw) : []
@@ -187,8 +212,8 @@ export default function Atividades() {
     }
   }
 
-  function openCompletedModal() {
-    loadCompletedActivitiesFromStorage(1)
+  async function openCompletedModal() {
+    await loadCompletedActivitiesFromStorage(1)
     setShowCompletedModal(true)
   }
 
@@ -211,32 +236,54 @@ export default function Atividades() {
     const cardId = record.cardId
     setRecoveringIds(prev => { const copy = new Set(prev); copy.add(id); return copy })
     try {
+      // start exit animation in the completed modal
+      setCompletedExitingIds(prev => { const copy = new Set(prev); copy.add(id); return copy })
+      // remove any matching entry from localStorage to avoid fallback showing stale record
+      try {
+        const key = 'completedActivitiesLog'
+        const raw = localStorage.getItem(key)
+        const arr = raw ? JSON.parse(raw) : []
+        const filtered = Array.isArray(arr) ? arr.filter(a => String(a.id) !== String(id)) : []
+        localStorage.setItem(key, JSON.stringify(filtered))
+      } catch (_) {}
+
+      // wait for exit animation to complete before performing server update
+      await new Promise(resolve => setTimeout(resolve, 360))
+
       // attempt to mark the original todo as not completed and ensure parentId is set
       const res = await updateTodo(id, { completed: false, parentId: cardId })
-        if (res && (res.status === 200 || res.ok)) {
-        // remove from local log
+      if (res && (res.status === 200 || res.ok)) {
         try {
-          const key = 'completedActivitiesLog'
-          const raw = localStorage.getItem(key)
-          const arr = raw ? JSON.parse(raw) : []
-          const filtered = Array.isArray(arr) ? arr.filter(a => String(a.id) !== String(id)) : []
-          localStorage.setItem(key, JSON.stringify(filtered))
-          // refresh modal list and main todos
-            loadCompletedActivitiesFromStorage(completedPage)
+          // animate re-entry into todos list
+          setEnteringFromRightIds(prev => { const copy = new Set(prev); copy.add(id); return copy })
+          // refresh server-side completed list and main todos
+          await loadCompletedActivitiesFromStorage(completedPage)
           const t = await fetchTodos()
-          setTodos(Array.isArray(t) ? t : [])
-            try { toast.success('Atividade recuperada') } catch (_) {}
+          // dedupe todos by _id to avoid duplicates
+          const deduped = Array.isArray(t) ? (() => {
+            const map = new Map();
+            for (const it of t) map.set(String(it._id), it);
+            return Array.from(map.values());
+          })() : []
+          setTodos(deduped)
+          // remove entering flag after animation duration
+          setTimeout(() => {
+            setEnteringFromRightIds(prev => { const copy = new Set(prev); copy.delete(id); return copy })
+          }, 420)
+          try { toast.success('Atividade recuperada') } catch (_) {}
         } catch (e) {
-          console.error('Erro ao atualizar o registro local após recuperação', e)
+          console.error('Erro ao atualizar registros após recuperação', e)
         }
       } else {
-          console.error('Falha ao recuperar atividade', res)
-          try { toast.error('Falha ao recuperar atividade') } catch (_) {}
+        console.error('Falha ao recuperar atividade', res)
+        try { toast.error('Falha ao recuperar atividade') } catch (_) {}
       }
     } catch (err) {
       console.error('Erro ao recuperar atividade', err)
-        try { toast.error('Erro ao recuperar atividade') } catch (_) {}
+      try { toast.error('Erro ao recuperar atividade') } catch (_) {}
     } finally {
+      // ensure exit/recoving flags are cleared
+      setCompletedExitingIds(prev => { const copy = new Set(prev); copy.delete(id); return copy })
       setRecoveringIds(prev => { const copy = new Set(prev); copy.delete(id); return copy })
     }
   }
@@ -246,7 +293,8 @@ export default function Atividades() {
       setLoading(true)
       setErr(null)
       // ensure user is authenticated; if not, redirect to home
-      const token = localStorage.getItem('token')
+      const { getAuthToken } = await import('../api')
+      const token = getAuthToken()
       if (!token) {
         window.location.href = '/'
         return
@@ -263,7 +311,13 @@ export default function Atividades() {
       }
       try {
         const t = await fetchTodos()
-        setTodos(Array.isArray(t) ? t : [])
+        // dedupe by _id to avoid accidental duplicates
+        const deduped = Array.isArray(t) ? (() => {
+          const map = new Map();
+          for (const it of t) map.set(String(it._id), it);
+          return Array.from(map.values());
+        })() : []
+        setTodos(deduped)
         // trigger entrance animation after todos are set, but only on the
         // first successful load — prevent retriggering during reorders.
         try {
@@ -788,13 +842,14 @@ export default function Atividades() {
                   return (
                     <div>
                       <ul style={{ padding: 0, listStyle: 'none', margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        {pageItems.map((a, idx) => {
+                          {pageItems.map((a, idx) => {
                           const cardObj = a.cardId ? cards.find(c => String(c._id) === String(a.cardId)) : null
                           // Prefer snapshot from the completed record (cardTitle/cardColor) when present
                           const cardTitle = a.cardTitle || (cardObj ? cardObj.title : (a.cardId ? '—' : '—'))
                           const cardColor = a.cardColor || (cardObj ? (cardObj.color || '#000') : '#000')
+                          const isExitingCompleted = completedExitingIds.has(String(a.id))
                           return (
-                            <li key={a.id || (completedPage+'-'+idx)} style={{ padding: 10, borderRadius: 8, background: 'rgba(0,0,0,0.03)', display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+                            <li key={a.id || (completedPage+'-'+idx)} className={(isExitingCompleted ? 'completed-item exit' : 'completed-item')} style={{ padding: 10, borderRadius: 8, background: 'rgba(0,0,0,0.03)', display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
                               <div style={{ flex: 1 }}>
                                 <div style={{ fontWeight: 700 }}>{a.title}</div>
                                 <div className="muted" style={{ fontSize: 13 }}>{a.description || ''}</div>
@@ -868,12 +923,13 @@ export default function Atividades() {
                 }
                 return (
                   <ul style={{ padding: 0, listStyle: 'none', margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {related.map(r => {
+                      {related.map(r => {
                       const isExiting = exitingIds.has(r._id)
                       const isPending = pendingIds.has(r._id)
                       const entering = viewCard && !isExiting && !isPending
+                      const enterRight = enteringFromRightIds.has(String(r._id))
                       return (
-                        <li key={r._id} className={"activity-item" + (isExiting ? ' exit' : '') + (entering ? ' animate-in' : '')} style={{ padding: 10, borderRadius: 8, background: 'rgba(0,0,0,0.03)' }}>
+                        <li key={r._id} className={"activity-item" + (isExiting ? ' exit' : '') + (enterRight ? ' enter-right' : (entering ? ' animate-in' : ''))} style={{ padding: 10, borderRadius: 8, background: 'rgba(0,0,0,0.03)' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
                             <div style={{ flex: 1 }}>
                               <div style={{ fontWeight: 700 }}>{r.title}</div>

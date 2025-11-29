@@ -22,7 +22,12 @@ export default function Dashboard({ onLogout }) {
       setErr(null)
       try {
         const me = await getMe()
-        if (me && me.user) setUser(me.user)
+        if (me && me.user) {
+          // ensure user's name is title-cased (first letter of each word capitalized)
+          const name = (me.user.name || '')
+          const titleName = String(name).trim().split(/\s+/).map(w => w ? (w.charAt(0).toUpperCase() + w.slice(1)) : '').filter(Boolean).join(' ')
+          setUser({ ...me.user, name: titleName })
+        }
         const t = await fetchTodos()
         setTodos(Array.isArray(t) ? t : [])
       } catch (e) {

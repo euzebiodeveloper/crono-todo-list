@@ -90,94 +90,77 @@ export default function Home() {
 
       <section className="section-bleed section-examples">
         <div className="section-inner">
-          <h3 className="section-title">Exemplos de Cartões</h3>
-          <div className="example-list">
-            {/** mock data and compact cards rendering */}
-            {(() => {
-              const mock = [
-                {
-                  id: 'c3',
-                  title: 'Entrega Cliente',
-                  activities: [
-                    { title: 'Finalizar relatórios', due: '2025-11-24T09:00:00' },
-                    { title: 'Enviar versão final', due: '2025-11-25T11:00:00' }
-                  ]
-                },
-                {
-                  id: 'c1',
-                  title: 'Projeto Alpha',
-                  activities: [
-                    { title: 'Planejar milestones', due: '2025-12-31T18:00:00' },
-                    { title: 'Reunião com time', due: '2025-12-20T10:00:00' }
-                  ]
-                },
-                {
-                  id: 'c2',
-                  title: 'Site Update',
-                  activities: [
-                    { title: 'Atualizar landing', due: '2025-11-30T14:00:00' },
-                    { title: 'Testes responsivos', due: '2025-12-01T09:00:00' }
-                  ]
-                }
-              ]
+          <h3 className="section-title">Como os cartões são ranqueados</h3>
+          <p className="muted">Cada cartão recebe uma cor que indica urgência com base nas atividades internas e nas datas de entrega. A lógica é:</p>
+          <ul>
+            <li><strong>Branco:</strong> Cartão sem atividades ou quando nenhuma atividade tem data de entrega — sem prioridade.</li>
+            <li><strong>Verde:</strong> Há atividade com prazo, mas o prazo mais próximo está distante — estado normal.</li>
+            <li><strong>Amarelo:</strong> Prazo se aproximando — atenção necessária.</li>
+            <li><strong>Laranja:</strong> Prazo em breve — priorizar esta tarefa.</li>
+            <li><strong>Vermelho:</strong> Prazo atingido ou vencido — ação imediata requerida.</li>
+          </ul>
 
-              function earliestDate(activities) {
-                if (!activities || activities.length === 0) return null
-                return activities.reduce((min, a) => {
-                  const d = new Date(a.due)
-                  return !min || d < min ? d : min
-                }, null)
-              }
+          <p className="muted">Thresholds usados (fórmula baseada na hora restante até o prazo mais próximo):</p>
+          <ul>
+            <li><strong>Vermelho:</strong> faltando &le; 0 horas (já vencido)</li>
+            <li><strong>Laranja:</strong> faltando &le; 72 horas (3 dias)</li>
+            <li><strong>Amarelo:</strong> faltando &le; 168 horas (7 dias)</li>
+            <li><strong>Verde:</strong> mais de 168 horas</li>
+          </ul>
 
-              function latestDate(activities) {
-                if (!activities || activities.length === 0) return null
-                return activities.reduce((max, a) => {
-                  const d = new Date(a.due)
-                  return !max || d > max ? d : max
-                }, null)
-              }
+          <div className="examples-row" style={{ display: 'flex', gap: 12, marginTop: 12, flexWrap: 'wrap' }}>
+            <article className="step-card example-step-card">
+              <div className="step-icon" aria-hidden>
+                <span className="card-dot" style={{ background: '#bdbdbd' }} />
+              </div>
+              <div className="step-body">
+                <div className="step-title">Sem prazos</div>
+                <div className="step-desc muted">Cartão branco: sem atividades com data</div>
+              </div>
+            </article>
 
-              function formatShort(d) {
-                if (!d) return '-'
-                // Format as DD/MM/YYYY - HH:MM:SS (include seconds)
-                const day = String(d.getDate()).padStart(2, '0')
-                const month = String(d.getMonth() + 1).padStart(2, '0')
-                const year = d.getFullYear()
-                const hours = String(d.getHours()).padStart(2, '0')
-                const minutes = String(d.getMinutes()).padStart(2, '0')
-                const seconds = String(d.getSeconds()).padStart(2, '0')
-                return `${day}/${month}/${year} - ${hours}:${minutes}:${seconds}`
-              }
+            <article className="step-card example-step-card">
+              <div className="step-icon" aria-hidden>
+                <span className="card-dot" style={{ background: '#27ae60' }} />
+              </div>
+              <div className="step-body">
+                <div className="step-title">Verde (normal)</div>
+                <div className="step-desc muted">Prazo mais próximo: &gt; 7 dias</div>
+              </div>
+            </article>
 
-              function urgencyClass(d) {
-                if (!d) return 'urgency-low'
-                const now = new Date()
-                const diff = (d - now) / (1000 * 60 * 60) // hours
-                if (diff <= 24) return 'urgency-high'
-                if (diff <= 72) return 'urgency-medium'
-                return 'urgency-low'
-              }
+            <article className="step-card example-step-card">
+              <div className="step-icon" aria-hidden>
+                <span className="card-dot" style={{ background: '#f1c40f' }} />
+              </div>
+              <div className="step-body">
+                <div className="step-title">Amarelo (atenção)</div>
+                <div className="step-desc muted">Prazo mais próximo: ≤ 7 dias</div>
+              </div>
+            </article>
 
-              // compute earliest/latest and priority, then render example cards
-              const prioritized = mock.map(card => {
-                const earliest = earliestDate(card.activities)
-                const latest = latestDate(card.activities)
-                const urgency = urgencyClass(earliest)
+            <article className="step-card example-step-card">
+              <div className="step-icon" aria-hidden>
+                <span className="card-dot" style={{ background: '#ff7f0e' }} />
+              </div>
+              <div className="step-body">
+                <div className="step-title">Laranja (em breve)</div>
+                <div className="step-desc muted">Prazo mais próximo: ≤ 3 dias</div>
+              </div>
+            </article>
 
-                return (
-                  <article key={card.id} className={`example-card ${urgency}`}>
-                        <h4>{card.title}</h4>
-                        <div className="example-meta">
-                          <div><strong>Início:</strong> {formatShort(earliest)}</div>
-                          <div><strong>Fim:</strong> {formatShort(latest)}</div>
-                        </div>
-                      </article>
-                )
-              })
-
-              return prioritized
-            })()}
+            <article className="step-card example-step-card">
+              <div className="step-icon" aria-hidden>
+                <span className="card-dot" style={{ background: '#d62728' }} />
+              </div>
+              <div className="step-body">
+                <div className="step-title">Vermelho (urgente)</div>
+                <div className="step-desc muted">Prazo atingido ou vencido (0 dias)</div>
+              </div>
+            </article>
           </div>
+
+          <p className="muted" style={{ marginTop: 12 }}>Observação: internamente o sistema considera a data/hora mais próxima entre as atividades do cartão para determinar a cor; quando não há datas válidas, o cartão fica branco.</p>
         </div>
       </section>
 
@@ -190,100 +173,106 @@ export default function Home() {
 
 function GallerySlider() {
   const [index, setIndex] = useState(0)
-  const items = new Array(6).fill(null).map((_, i) => ({ id: i, title: `Em breve ${i + 1}` }))
+  const [items, setItems] = useState([])
+  const [modalOpen, setModalOpen] = useState(false)
+  const [modalIndex, setModalIndex] = useState(0)
+
+  useEffect(() => {
+    let mounted = true
+    async function loadGallery() {
+      try {
+        const res = await fetch('/images/gallery/gallery.json')
+        if (!res.ok) throw new Error('no manifest')
+        const json = await res.json()
+        if (mounted && Array.isArray(json) && json.length > 0) setItems(json)
+      } catch (_) {
+        // fallback: default placeholders
+        if (mounted && items.length === 0) setItems(new Array(6).fill(null).map((_, i) => ({ id: i, title: `Em breve ${i + 1}` })))
+      }
+    }
+    loadGallery()
+    return () => { mounted = false }
+  }, [])
 
   function prev() { setIndex(i => (i - 1 + items.length) % items.length) }
   function next() { setIndex(i => (i + 1) % items.length) }
 
   // thumbnails: show prev, current, next (wrap-around)
-  const len = items.length
+  const len = items.length || 1
   const thumbs = [ (index - 1 + len) % len, index, (index + 1) % len ]
+  // ensure thumbnails are unique (avoid duplicate React keys when len < 3)
+  const uniqueThumbs = Array.from(new Set(thumbs))
 
-  // modal state
-  const [modalOpen, setModalOpen] = useState(false)
-  const [modalIndex, setModalIndex] = useState(0)
-
-  function openModal(i) {
-    setModalIndex(i)
-    setModalOpen(true)
-  }
-
-  function closeModal() {
-    setModalOpen(false)
-  }
-
+  function openModal(i) { setModalIndex(i); setModalOpen(true) }
+  function closeModal() { setModalOpen(false) }
   function modalPrev() { setModalIndex(i => (i - 1 + items.length) % items.length) }
   function modalNext() { setModalIndex(i => (i + 1) % items.length) }
 
-  // keyboard support (handles both gallery and modal)
+  // keyboard support: when modalOpen (viewing single photo), only allow Escape to close
   useEffect(() => {
     function onKey(e) {
-      if (e.key === 'ArrowLeft') {
-        if (modalOpen) modalPrev()
-        else prev()
+      if (modalOpen) {
+        if (e.key === 'Escape') closeModal()
+        return
       }
-      if (e.key === 'ArrowRight') {
-        if (modalOpen) modalNext()
-        else next()
-      }
-      if (e.key === 'Escape' && modalOpen) closeModal()
+      if (e.key === 'ArrowLeft') prev()
+      if (e.key === 'ArrowRight') next()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [modalOpen])
+  }, [modalOpen, items])
+
+  const current = items[index] || { title: '', file: null }
 
   return (
     <div className="gallery-block">
       <div className="gallery-slider">
-        <button className="gallery-arrow" aria-label="Anterior" onClick={prev}>
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M15 18 L9 12 L15 6" />
-          </svg>
-        </button>
-        <div className="gallery-main" role="img" aria-label={items[index].title} onClick={() => openModal(index)}>
-          <div className="gallery-main-placeholder">{items[index].title}</div>
+        <div className="gallery-main" role="img" aria-label={current.title} onClick={() => openModal(index)}>
+          <button className="gallery-arrow left" aria-label="Anterior" onClick={(e) => { e.stopPropagation(); prev(); }}>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M15 18 L9 12 L15 6" />
+            </svg>
+          </button>
+          {current.file ? (
+            <img src={`/images/gallery/${current.file}`} alt={current.alt || current.title} style={{ maxWidth: '100%', height: 'auto', borderRadius: 8 }} />
+          ) : (
+            <div className="gallery-main-placeholder">{current.title}</div>
+          )}
+          <button className="gallery-arrow right" aria-label="Próximo" onClick={(e) => { e.stopPropagation(); next(); }}>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M9 18 L15 12 L9 6" />
+            </svg>
+          </button>
         </div>
-        <button className="gallery-arrow" aria-label="Próximo" onClick={next}>
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M9 18 L15 12 L9 6" />
-          </svg>
-        </button>
       </div>
 
       <div className="gallery-thumbs">
-        {thumbs.map(i => (
-          <button key={i} className={`thumb ${i === index ? 'active' : ''}`} onClick={() => setIndex(i)} aria-label={`Ir para ${items[i].title}`}>
-            <div className="thumb-placeholder">{items[i].title}</div>
+        {uniqueThumbs.map(i => (
+          <button key={items[i] && items[i].id ? `thumb-${items[i].id}` : `thumb-${i}`} className={`thumb ${i === index ? 'active' : ''}`} onClick={() => setIndex(i)} aria-label={`Ir para ${items[i] ? items[i].title : i}`}>
+            {items[i] && items[i].file ? (
+              <img src={`/images/gallery/${items[i].file}`} alt={items[i].alt || items[i].title} style={{ width: 120, height: 72, objectFit: 'cover', borderRadius: 6 }} />
+            ) : (
+              <div className="thumb-placeholder">{items[i] ? items[i].title : '—'}</div>
+            )}
           </button>
         ))}
       </div>
 
       {modalOpen && (
         <div className="modal-overlay" role="dialog" aria-modal="true" onClick={closeModal}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <button className="modal-close" aria-label="Fechar" onClick={closeModal}>×</button>
-            <div className="modal-main-row">
-              <button className="gallery-arrow modal" aria-label="Anterior" onClick={modalPrev}>
-                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                  <path d="M15 18 L9 12 L15 6" />
-                </svg>
-              </button>
-              <div className="modal-main" role="img" aria-label={items[modalIndex].title}>
-                <div className="gallery-main-placeholder">{items[modalIndex].title}</div>
-              </div>
-              <button className="gallery-arrow modal" aria-label="Próximo" onClick={modalNext}>
-                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                  <path d="M9 18 L15 12 L9 6" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="modal-thumbs">
-              {items.map((it, idx) => (
-                <button key={it.id} className={`thumb ${idx === modalIndex ? 'active' : ''}`} onClick={() => setModalIndex(idx)} aria-label={`Ir para ${it.title}`}>
-                  <div className="thumb-placeholder">{it.title}</div>
-                </button>
-              ))}
+          <div className="modal-content gallery-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-main" role="img" aria-label={items[modalIndex] ? items[modalIndex].title : ''}>
+              {items[modalIndex] && items[modalIndex].file ? (
+                <div className="photo-frame-wrap">
+                  <div className="photo-frame">
+                    <button className="modal-close photo-close" aria-label="Fechar" onClick={closeModal}>×</button>
+                    <img src={`/images/gallery/${items[modalIndex].file}`} alt={items[modalIndex].alt || items[modalIndex].title} />
+                  </div>
+                  {/* caption removed: don't render title/caption under the photo */}
+                </div>
+              ) : (
+                <div className="gallery-main-placeholder">{items[modalIndex] ? items[modalIndex].title : ''}</div>
+              )}
             </div>
           </div>
         </div>

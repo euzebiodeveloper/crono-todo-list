@@ -7,17 +7,35 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import Atividades from './pages/Atividades'
+import { getAuthToken, clearAuthToken, setAuthToken, getAuthExpiry } from './api'
 
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
-  const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem('token'))
+  const [isAuthenticated, setIsAuthenticated] = useState(() => !!getAuthToken())
   const navRef = useRef()
+
+  // schedule automatic logout when token expires
+  useEffect(() => {
+    try {
+      const exp = getAuthExpiry()
+      if (!exp) return
+      const ms = exp - Date.now()
+      if (ms <= 0) {
+        clearAuthToken(); setIsAuthenticated(false); return
+      }
+      const t = setTimeout(() => {
+        clearAuthToken(); setIsAuthenticated(false); try { toast.info('Sessão expirada') } catch (_) {}
+        try { window.location.href = '/' } catch (_) {}
+      }, ms)
+      return () => clearTimeout(t)
+    } catch (_) {}
+  }, [])
 
   // small component used inside the Router to logout and redirect home
   function LogoutButton() {
     const navigate = useNavigate()
     function handleLogout() {
-      localStorage.removeItem('token')
+      clearAuthToken()
       setIsAuthenticated(false)
       setMenuOpen(false)
       try { toast.info('Você saiu da conta') } catch (_) {}
@@ -89,9 +107,9 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/about" element={<About />} />
-            <Route path="/login" element={<Login onAuth={(token) => { localStorage.setItem('token', token); setIsAuthenticated(true); }} />} />
-            <Route path="/register" element={<Register onAuth={(token) => { localStorage.setItem('token', token); setIsAuthenticated(true); }} />} />
-            <Route path="/dashboard" element={<Dashboard onLogout={() => { localStorage.removeItem('token'); setIsAuthenticated(false); try { toast.info('Você saiu da conta') } catch (_) {} }} />} />
+            <Route path="/login" element={<Login onAuth={(token, remember=false) => { try { setAuthToken(token, remember) } catch(_){}; setIsAuthenticated(true); }} />} />
+            <Route path="/register" element={<Register onAuth={(token) => { try { setAuthToken(token, false) } catch(_){}; setIsAuthenticated(true); }} />} />
+            <Route path="/dashboard" element={<Dashboard onLogout={() => { clearAuthToken(); setIsAuthenticated(false); try { toast.info('Você saiu da conta') } catch (_) {} }} />} />
             <Route path="/atividades" element={<Atividades />} />
           </Routes>
         </main>

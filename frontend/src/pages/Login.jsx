@@ -1,11 +1,12 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { loginUser } from '../api'
+import { loginUser, setAuthToken } from '../api'
 import { toast } from 'react-toastify'
 
 export default function Login({ onAuth }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [remember, setRemember] = useState(false)
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
@@ -15,9 +16,10 @@ export default function Login({ onAuth }) {
     try {
       const res = await loginUser({ email, password })
       if (res.token) {
-        // store token and notify parent
+        // store token with expiry depending on remember checkbox
+        try { setAuthToken(res.token, remember) } catch (_) {}
+        // notify parent
         if (onAuth) onAuth(res.token)
-        localStorage.setItem('token', res.token)
         // mark that a login just happened so Dashboard can show a welcome message
         try { sessionStorage.setItem('justLoggedIn', 'true') } catch (e) {}
         toast.success('Login realizado com sucesso')
@@ -45,6 +47,11 @@ export default function Login({ onAuth }) {
 
             <label className="visually-hidden" htmlFor="password">Senha</label>
             <input id="password" type="password" placeholder="senha" value={password} onChange={e => setPassword(e.target.value)} disabled={loading} />
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} />
+              <span>Lembrar senha</span>
+            </label>
 
             <button type="submit" className="btn" disabled={loading}>{loading ? 'Entrando...' : 'Entrar'}</button>
           </form>

@@ -436,6 +436,10 @@ nav a:hover, nav a:focus {
 	background: linear-gradient(180deg,#f1c40f 0%, #e0b700 100%);
 	color: #07202a;
 }
+.example-card.urgency-orange {
+    background: linear-gradient(180deg,#ff7f0e 0%, #e86d00 100%);
+    color: #07202a;
+}
 .example-card.urgency-high {
 	background: linear-gradient(180deg,#e74c3c 0%, #c0392b 100%);
 	color: #ffffff;
@@ -465,20 +469,19 @@ nav a:hover, nav a:focus {
 .example-card.urgency-high .ec-sub { color: rgba(255,255,255,0.95); }
 .example-card.urgency-medium .ec-sub { color: rgba(0,0,0,0.82); }
 
-/* badges: compact two-line date badge for example cards */
 .example-card .ec-badge {
-	display: inline-flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-	gap: 1px;
-	min-width: 56px;
-	padding: 6px 8px;
-	border-radius: 8px;
-	font-size: 16px;
-	line-height: 1;
-	background: rgba(255,255,255,0.12);
-	color: inherit;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    min-width: 56px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    font-size: 16px;
+    line-height: 1;
+    background: rgba(255,255,255,0.12);
+    color: inherit;
 }
 .example-card.urgency-medium .ec-badge { background: rgba(255,255,255,0.96); color: var(--accent); }
 .example-card.urgency-low .ec-badge { background: rgba(255,255,255,0.18); }
@@ -578,26 +581,28 @@ nav a:hover, nav a:focus {
 }
 
 /* Make .home-page occupy full available width and remove card styling */
-.home-page {
-	width: 100%;
-	max-width: none;
-	background: transparent !important;
-	padding: 0 !important;
-	margin: 0 auto;
-	border-radius: 0 !important;
-	box-shadow: none !important;
+.photo-frame { 
+	background: #fff;
+	padding: 14px 14px 18px 14px;
+	border-radius: 6px;
+	box-shadow: 0 18px 40px rgba(0,0,0,0.28), 0 6px 18px rgba(0,0,0,0.12);
+	transform: none;
+	transition: transform 260ms cubic-bezier(.2,.9,.2,1), box-shadow 200ms ease;
+	display: inline-block;
+	max-width: min(92vw, 900px);
 }
-
-.home-page .hero-inner { width: 100%; max-width: none; }
-
-/* Treasure-map style for How It Works */
-.how-it-works .steps { margin-top: 12px; }
-
-/* Gallery slider styles */
+.photo-frame img { 
+	display: block; 
+	max-width: 86vw; 
+	max-height: calc(100vh - 180px); 
+	width: auto; 
+	height: auto; 
+	border-radius: 4px; 
+}
+.photo-frame:hover { transform: scale(1.02); box-shadow: 0 26px 60px rgba(0,0,0,0.45), 0 8px 22px rgba(0,0,0,0.18); }
 .gallery-section { margin-top: 28px; }
 .gallery-block { display: flex; flex-direction: column; gap: 12px; }
-.gallery-slider { display: flex; align-items: center; gap: 12px; justify-content: center; }
-.gallery-main { width: 540px; height: 300px; display:flex; align-items:center; justify-content:center; }
+.gallery-main { width: 540px; height: 300px; display:flex; align-items:center; justify-content:center; overflow: hidden; }
 .gallery-main-placeholder { width: 100%; height: 100%; border-radius: 12px; background: linear-gradient(180deg,#ffffff,#fbfbfb); display:flex; align-items:center; justify-content:center; border: 1px dashed rgba(10,41,60,0.08); font-weight:700; color:var(--muted); }
 .gallery-arrow {
 	background: var(--card);
@@ -615,9 +620,29 @@ nav a:hover, nav a:focus {
 .gallery-arrow svg { width: 18px; height: 18px; display: block; }
 .gallery-arrow svg path { stroke: var(--accent); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
 .gallery-thumbs { display:flex; gap:12px; justify-content:center; align-items:center; }
-.thumb { background: transparent; border: none; padding: 0; cursor: pointer; }
-.thumb-placeholder { width: 120px; height: 72px; border-radius: 8px; display:flex; align-items:center; justify-content:center; background: linear-gradient(180deg,#ffffff,#faf6f0); border: 1px solid rgba(10,41,60,0.06); color: var(--muted); font-weight:700; }
-.thumb.active .thumb-placeholder { box-shadow: 0 12px 30px rgba(10,41,60,0.08); border-color: rgba(10,41,60,0.12); }
+.gallery-thumbs { display:flex; gap:12px; justify-content:center; align-items:center; }
+.thumb { background: transparent; border: none; padding: 0; cursor: pointer; display: inline-block; border-radius: 6px; overflow: hidden; }
+.gallery-thumbs .thumb img { width: 120px; height: 72px; object-fit: cover; display: block; }
+.thumb-placeholder { width: 120px; height: 72px; border-radius: 6px; display:flex; align-items:center; justify-content:center; background: linear-gradient(180deg,#ffffff,#faf6f0); border: 1px solid rgba(10,41,60,0.06); color: var(--muted); font-weight:700; }
+.thumb.active img { box-shadow: 0 12px 30px rgba(10,41,60,0.08); border-color: rgba(10,41,60,0.12); }
+
+/* Ensure the gallery slider lays out controls and main image in a row by default */
+.gallery-slider { display: flex; align-items: center; gap: 12px; justify-content: center; flex-wrap: nowrap; }
+.gallery-slider .gallery-main { flex: 0 0 auto; position: relative; }
+.gallery-main img, .gallery-main .photo-frame img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+.gallery-slider .gallery-main .gallery-arrow { position: absolute; top: 50%; transform: translateY(-50%); z-index: 20; background: var(--card); border-radius: 999px; width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid rgba(10,41,60,0.06); }
+.gallery-slider .gallery-main .gallery-arrow.left { left: 8px; }
+.gallery-slider .gallery-main .gallery-arrow.right { right: 8px; }
+
+@media (max-width: 700px) {
+	/* Keep slider horizontal on mobile; arrows overlay the main image (positioning tied to .gallery-main) */
+	.gallery-slider { flex-direction: row; gap: 8px; align-items: center; padding: 0; }
+	.gallery-slider .gallery-main { width: 100%; height: auto; overflow: visible; }
+	.gallery-main img, .gallery-main .photo-frame img { max-width: 100%; max-height: none; height: auto; object-fit: contain; }
+	.gallery-slider .gallery-main .gallery-arrow { width: 42px; height: 42px; }
+	.gallery-thumbs { justify-content: center; flex-wrap: nowrap; overflow-x: auto; padding: 6px 4px; margin-top: 8px; }
+	.gallery-thumbs .thumb { flex: 0 0 auto; }
+}
 
 /* Cursor affordances */
 .gallery-main:hover, .modal-main:hover {
@@ -650,6 +675,53 @@ nav a:hover, nav a:focus {
 	display: flex;
 	flex-direction: column;
 	gap: 12px;
+}
+
+/* Gallery-specific modal: lightweight, centered photo display */
+.modal-content.gallery-modal {
+	background: transparent; /* allow the photo-frame visual to carry the look */
+	box-shadow: none;
+	padding: 6px;
+	border-radius: 10px;
+	max-width: 96vw;
+	width: auto;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+.modal-content.gallery-modal .modal-main { width: auto; height: auto; padding: 0; }
+.modal-content.gallery-modal .modal-close {
+	right: 8px;
+	top: 8px;
+	background: rgba(0,0,0,0.45);
+	color: #fff;
+	width: 36px;
+	height: 36px;
+	border-radius: 999px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 20px;
+	line-height: 1;
+}
+
+/* Position close button inside the photo-frame */
+.modal-content.gallery-modal .photo-frame { position: relative; }
+.modal-content.gallery-modal .photo-frame .photo-close {
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	z-index: 30;
+	background: rgba(0,0,0,0.55);
+	color: #fff;
+	width: 36px;
+	height: 36px;
+	border-radius: 999px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border: none;
+	cursor: pointer;
 }
 
 /* Compact, cleaner styling for card-view modals */
@@ -696,6 +768,11 @@ nav a:hover, nav a:focus {
 	0% { transform: translateX(0); opacity: 1 }
 	100% { transform: translateX(26%); opacity: 0 }
 }
+
+/* Completed modal: slide-out to right when recovering */
+.completed-item.exit {
+	animation: slideOutItem 360ms cubic-bezier(.2,.9,.2,1) both !important;
+}
 /* animate the action controls (date + checkbox) sliding in from left when modal opens */
 .activity-actions.animate-in {
     animation: slideInFromLeft 360ms cubic-bezier(.2,.9,.2,1) both;
@@ -703,6 +780,21 @@ nav a:hover, nav a:focus {
 /* animate the whole activity item sliding in from left when the modal opens */
 .activity-item.animate-in {
     animation: slideInFromLeft 360ms cubic-bezier(.2,.9,.2,1) both;
+}
+/* slide-in from right for recovered activities */
+.activity-item.enter-right {
+	animation: slideInFromRight 360ms cubic-bezier(.2,.9,.2,1) both;
+}
+
+@keyframes slideInFromRight {
+	0% {
+		transform: translateX(24px);
+		opacity: 0;
+	}
+	100% {
+		transform: translateX(0);
+		opacity: 1;
+	}
 }
 .modal-content.card-modal h3 {
 	margin: 4px 0 6px;
@@ -760,6 +852,37 @@ nav a:hover, nav a:focus {
 .modal-main .gallery-main-placeholder { height: 100%; width: 100%; border-radius: 10px; }
 .modal-thumbs { display:flex; gap:10px; justify-content:center; align-items:center; padding-top:6px; }
 .modal-thumbs .thumb-placeholder { width: 92px; height: 64px; }
+
+/* Photo-frame modal: centered photo display (no rotation) */
+.photo-frame-wrap { display: flex; align-items: center; justify-content: center; width: 100%; }
+.photo-caption { text-align: center; margin-top: 8px; }
+
+@media (max-width: 700px) {
+	/* Mobile: full-bleed friendly sizing */
+	.photo-frame { transform: none !important; padding: 10px; box-shadow: 0 12px 30px rgba(0,0,0,0.18); max-width: 92vw; }
+	.photo-frame img { max-width: 100%; max-height: calc(100vh - 160px); object-fit: contain; display: block; }
+	.modal-main { width: auto; height: auto; padding: 8px; }
+	.modal-content { padding: 10px; }
+
+	/* Ensure the gallery modal caps its size on mobile and prevents the image overflowing the popup */
+	.modal-content.gallery-modal { max-width: calc(100vw - 20px); max-height: calc(100vh - 24px); overflow: hidden; }
+	.modal-content.gallery-modal .modal-main { max-height: calc(100vh - 60px); overflow: auto; display:flex; align-items:center; justify-content:center; }
+	.modal-content.gallery-modal .photo-frame { max-width: 100%; max-height: 100%; padding: 6px; box-shadow: 0 12px 26px rgba(0,0,0,0.14); }
+}
+
+/* Reduce large vertical gaps between stacked sections on mobile */
+@media (max-width: 700px) {
+	.gallery-section { margin-top: 12px !important; }
+	/* Optionally reduce spacing for other full-bleed sections */
+	.section-bleed { padding-top: 6px !important; padding-bottom: 6px !important; }
+}
+
+/* Tablet: slightly narrower and softer shadow */
+@media (max-width: 900px) {
+	.photo-frame { max-width: 84vw; padding: 12px; box-shadow: 0 14px 34px rgba(0,0,0,0.22); }
+	.photo-frame img { max-width: 82vw; max-height: calc(100vh - 160px); }
+	.modal-main { width: auto; height: auto; }
+}
 
 @media (max-width: 900px) {
 	.modal-main { width: 520px; height: 340px; }
@@ -932,6 +1055,53 @@ nav a:hover, nav a:focus {
 	color: var(--muted);
 }
 
+/* Example step card variant: compact, horizontal, matches other example cards' visual style */
+.example-step-card {
+	background: var(--card);
+	border: 1px solid rgba(10,41,60,0.06);
+	box-shadow: 0 12px 30px rgba(10,41,60,0.04);
+	border-radius: 12px;
+	padding: 12px 14px;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 12px;
+	width: 320px;
+	min-width: 260px;
+	text-align: left;
+}
+.example-step-card .step-icon {
+	width: 48px;
+	height: 48px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: transparent;
+	border-radius: 10px;
+	box-shadow: none;
+}
+.example-step-card .card-dot {
+	width: 14px;
+	height: 14px;
+	border-radius: 50%;
+	display: inline-block;
+}
+.example-step-card .step-body { flex: 1 1 auto; }
+.example-step-card .step-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.example-step-card .step-desc { font-size: 13px; color: var(--muted); margin: 0; }
+
+@media (max-width: 900px) {
+	.example-step-card { width: 100%; min-width: 0; }
+}
+
+/* Ensure example cards stack vertically and occupy full width on smaller screens */
+.examples-row { display: flex; gap: 12px; flex-wrap: wrap; }
+.section-examples .examples-row { margin-top: 12px; }
+@media (max-width: 700px) {
+	.examples-row { flex-direction: column; gap: 12px; }
+	.examples-row .example-step-card { width: 100%; min-width: 100%; }
+}
+
 @media (min-width: 900px) {
 	/* allow a slightly wider note on larger screens while keeping it centered */
 	.how-it-works .steps-note { max-width: 420px; }
@@ -951,6 +1121,34 @@ nav a:hover, nav a:focus {
 /* Full-bleed section layout: section stretches across viewport but content stays centered */
 .section-bleed { width: 100vw; position: relative; left: 50%; right: 50%; margin-left: -50vw; margin-right: -50vw; padding: 28px 0; }
 .section-inner { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+/* Add extra internal padding for the examples section so content doesn't
+	 feel full-bleed — keeps consistent spacing with other sections */
+.section-examples .section-inner {
+	padding: 20px 24px;
+}
+
+@media (max-width: 700px) {
+	.section-examples .section-inner {
+		padding: 16px 16px;
+	}
+}
+
+/* Ensure direct children inside the examples inner container keep consistent
+	 lateral padding so fields and cards don't touch the edges. This prevents
+	 certain inner elements from appearing full-bleed. */
+.section-examples .section-inner > * {
+	padding-left: 24px;
+	padding-right: 24px;
+	box-sizing: border-box;
+}
+
+@media (max-width: 700px) {
+	.section-examples .section-inner > * {
+		padding-left: 16px;
+		padding-right: 16px;
+	}
+}
 
 /* Dashboard header: title on the left, logout button aligned to the right */
 .dashboard-header {

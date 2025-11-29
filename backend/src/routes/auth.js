@@ -123,3 +123,5 @@ router.post('/reset-password', authMiddleware, async (req, res) => {
 });
 
 module.exports = router;
+// also expose the auth middleware so other routes can protect endpoints
+module.exports.authMiddleware = authMiddleware;

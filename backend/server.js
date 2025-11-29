@@ -19,11 +19,42 @@ app.get('/', (req, res) => res.send('Crono Todo List API'));
 
 async function start() {
   try {
-    const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/crono-todo';
-    await mongoose.connect(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true });
-    console.log('Connected to MongoDB');
+    let mongoUri = process.env.MONGO_URI;
+    if (!mongoUri) {
+      console.error('MONGO_URI is not set. The server requires an explicit MONGO_URI to avoid accidental use of the default "test" DB. Example: mongodb://localhost:27017/crono-todo-list');
+      process.exit(1);
+    }
 
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    // If URI has no database path (for example ends with '/?query' or has no path),
+    // append the application DB name 'crono-todo-list' before any query string.
+    const queryIndex = mongoUri.indexOf('?');
+    const queryPart = queryIndex !== -1 ? mongoUri.slice(queryIndex) : '';
+    let uriWithoutQuery = queryIndex !== -1 ? mongoUri.slice(0, queryIndex) : mongoUri;
+    const parts = uriWithoutQuery.split('/');
+    if (parts.length <= 3 || parts[3] === '') {
+      uriWithoutQuery = uriWithoutQuery.replace(/\/?$/, '') + '/crono-todo-list';
+      mongoUri = uriWithoutQuery + queryPart;
+      console.warn('MONGO_URI did not include a database name. Appending default DB name:', mongoUri);
+    }
+
+    // Prevent accidental usage of a remote/prod cluster during development.
+    // If NODE_ENV !== 'production' and the host doesn't look like localhost and
+    // ALLOW_REMOTE_DB is not explicitly set, refuse to connect.
+    const hostPart = mongoUri.replace(/^mongodb(\+srv)?:\/\//, '').split('/')[0];
+    const isLocal = hostPart.startsWith('localhost') || hostPart.startsWith('127.0.0.1');
+    if (process.env.NODE_ENV !== 'production' && !isLocal && process.env.ALLOW_REMOTE_DB !== '1') {
+      console.error('Refusing to connect to remote MongoDB while NODE_ENV!=production. Set ALLOW_REMOTE_DB=1 to override if you really intend to use the remote DB in development.');
+      console.error('Detected host:', hostPart);
+      process.exit(1);
+    }
+
+    // detect explicit (or accidental) 'test' database and refuse to start to
+    // avoid accidental data writes. Ask developer to set MONGO_URI properly.
+    const dbName = mongoUri.split('/').pop().split('?')[0];
+
+    await mongoose.connect(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true });
+
+    app.listen(PORT, () => {});
   } catch (err) {
     console.error('Failed to start server:', err);
     process.exit(1);
