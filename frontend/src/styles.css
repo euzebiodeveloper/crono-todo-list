@@ -398,6 +398,26 @@ nav a:hover, nav a:focus {
 	min-height: 140px; /* increased to fit larger typography */
 	align-self: flex-start; /* prevents stretch in column flex containers */
 }
+
+/* Toggle completed activity date locations by breakpoint:
+   - Desktop / Tablet (>=768px): show the bold date on the right (.completed-date-right)
+	 and hide the small date below the title (.completed-date-left).
+   - Mobile (<768px): show the small date below the title and hide the right bold date.
+*/
+
+/* Default: ensure both date variants have sensible defaults (allow overrides) */
+.completed-date-left { display: none; }
+.completed-date-right { display: block; }
+
+@media (max-width: 767px) {
+	.completed-date-left { display: block !important; }
+	.completed-date-right { display: none !important; }
+}
+
+@media (min-width: 768px) {
+	.completed-date-left { display: none !important; }
+	.completed-date-right { display: block !important; }
+}
     
 		/* elevated style applied while a card is sliding (FLIP moving) */
 		.example-card.moving {
@@ -881,7 +901,59 @@ nav a:hover, nav a:focus {
 @media (max-width: 900px) {
 	.photo-frame { max-width: 84vw; padding: 12px; box-shadow: 0 14px 34px rgba(0,0,0,0.22); }
 	.photo-frame img { max-width: 82vw; max-height: calc(100vh - 160px); }
+
+/* Reduce font sizes inside card-style modals on small screens to improve
+	 the completed-activities popup layout and avoid overlap */
+@media (max-width: 700px) {
+	.modal-content.card-modal { font-size: 13px; padding: 10px; }
+	.modal-content.card-modal h3 { font-size: 16px; margin-bottom: 6px; }
+	.modal-content.card-modal p.muted { font-size: 11px; }
+	.modal-content.card-modal ul li { font-size: 12px; }
+	.modal-content.card-modal ul li .muted { font-size: 11px; }
+	.modal-content.card-modal .btn { font-size: 12px; padding: 6px 8px; }
+	.modal-content.card-modal .muted[style] { font-size: 11px; }
+}
+
+/* Small mobile variant for important action buttons used in Atividades */
+@media (max-width: 700px) {
+	.mobile-small { font-size: 12px !important; padding: 8px 10px !important; }
+}
+
+/* Completed activities: show date under title only on mobile, keep on right on tablet/desktop */
+/* Default (desktop/tablet): hide left date, show right date */
+.completed-date { display: inline-block; }
+.completed-date-left { display: none !important; }
+.completed-date-right { display: block !important; }
+
+/* Mobile: stack items and show the left/below date instead */
+@media (max-width: 700px) {
+	.modal-content.card-modal .completed-item { flex-direction: column !important; align-items: stretch !important; }
+	.modal-content.card-modal .completed-item > div { width: 100% !important; }
+	.modal-content.card-modal .completed-date-left { display: block !important; margin-top: 6px; }
+	.modal-content.card-modal .completed-date-right { display: none !important; }
+	.modal-content.card-modal .completed-right { text-align: left !important; min-width: auto !important; margin-top: 8px !important; }
+}
 	.modal-main { width: auto; height: auto; }
+}
+
+/* Completed modal: prevent the popup from growing indefinitely when there are many items.
+   Allow the modal to increase in height up to a limit and make the list scrollable vertically. */
+.modal-content.card-modal {
+	/* allow modal to grow but cap to viewport minus small margin */
+	max-height: calc(100vh - 48px);
+	overflow: hidden; /* keep header/actions visible, list will scroll */
+}
+.modal-content.card-modal ul {
+	/* leave room for title, actions and paddings when calculating list max-height */
+	max-height: calc(100vh - 220px);
+	overflow-y: auto;
+	-webkit-overflow-scrolling: touch;
+	padding-right: 8px; /* avoid content hiding under scrollbar */
+}
+
+@media (max-width: 700px) {
+	.modal-content.card-modal { max-height: calc(100vh - 24px); }
+	.modal-content.card-modal ul { max-height: calc(100vh - 160px); }
 }
 
 @media (max-width: 900px) {

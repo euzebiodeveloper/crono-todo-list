@@ -699,7 +699,7 @@ export default function Atividades() {
           )}
         <div className="activities-controls-row" style={{ marginBottom: 12, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
           {!showCardForm && !showForm && (
-            <button className="btn" onClick={() => { setShowCardForm(true); setShowForm(false); }}>Novo cartão</button>
+            <button className="btn mobile-small" onClick={() => { setShowCardForm(true); setShowForm(false); }}>Novo cartão</button>
           )}
           {showCardForm && (
             <form onSubmit={handleCreateCard} style={{ marginTop: 0 }} className="auth-form card-mini-form">
@@ -722,8 +722,8 @@ export default function Atividades() {
           )}
           {!showForm && !showCardForm && (
             <>
-              <button className="btn" onClick={() => { setShowForm(true); setShowCardForm(false); if (cards && cards.length > 0) setSelectedCardId(cards[0]._id); }} disabled={!(hasAnyActivity || (cards && cards.length > 0))}>Nova atividade</button>
-              <button type="button" className="btn secondary" onClick={openCompletedModal} style={{ marginLeft: 8 }}>Atividades concluídas</button>
+              <button className="btn mobile-small" onClick={() => { setShowForm(true); setShowCardForm(false); if (cards && cards.length > 0) setSelectedCardId(cards[0]._id); }} disabled={!(hasAnyActivity || (cards && cards.length > 0))}>Nova atividade</button>
+              <button type="button" className="btn secondary mobile-small" onClick={openCompletedModal} style={{ marginLeft: 8 }}>Atividades concluídas</button>
             </>
           )}
           {showForm && (
@@ -852,6 +852,7 @@ export default function Atividades() {
                             <li key={a.id || (completedPage+'-'+idx)} className={(isExitingCompleted ? 'completed-item exit' : 'completed-item')} style={{ padding: 10, borderRadius: 8, background: 'rgba(0,0,0,0.03)', display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
                               <div style={{ flex: 1 }}>
                                 <div style={{ fontWeight: 700 }}>{a.title}</div>
+                                <div className="completed-date completed-date-left muted" style={{ fontSize: 12, marginTop: 6 }}>{formatCompletedAt(a.completedAt)}</div>
                                 <div className="muted" style={{ fontSize: 13 }}>{a.description || ''}</div>
                                 <div className="muted" style={{ fontSize: 12, marginTop: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
                                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
@@ -860,8 +861,8 @@ export default function Atividades() {
                                   </span>
                                 </div>
                               </div>
-                              <div style={{ whiteSpace: 'nowrap', textAlign: 'right', minWidth: 160 }}>
-                                <div style={{ fontSize: 13, fontWeight: 700 }}>{formatCompletedAt(a.completedAt)}</div>
+                              <div className="completed-right" style={{ whiteSpace: 'nowrap', textAlign: 'right', minWidth: 160 }}>
+                                <div className="completed-date completed-date-right" style={{ fontSize: 13, fontWeight: 700 }}>{formatCompletedAt(a.completedAt)}</div>
                                 {cardObj && (
                                   <div style={{ marginTop: 8 }}>
                                     <button className="btn" type="button" onClick={() => recoverCompletedActivity(a)} disabled={recoveringIds.has(a.id)} style={{ padding: '6px 10px', fontSize: 13 }}>
