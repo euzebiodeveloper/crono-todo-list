@@ -17,7 +17,18 @@ router.get('/', auth.authMiddleware, async (req, res) => {
 router.get('/completed', auth.authMiddleware, async (req, res) => {
   const user = await User.findById(req.user.id).select('completedActivities');
   if (!user) return res.status(404).json({ error: 'User not found' });
-  const list = (user.completedActivities || []).slice().sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+  // Filter out snapshots that correspond to recurring activities (they should not be recoverable)
+  const raw = (user.completedActivities || []).slice();
+  const filtered = raw.filter(snap => {
+    try {
+      if (!snap || !snap.originalId) return true
+      // if the original activity still exists and is recurring, exclude the snapshot
+      const orig = user.todos && Array.isArray(user.todos) ? user.todos.find(t => String(t._id) === String(snap.originalId)) : null
+      if (orig && orig.recurring) return false
+      return true
+    } catch (_) { return true }
+  })
+  const list = filtered.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
   res.json(list);
 });
 
@@ -67,27 +78,30 @@ router.put('/:id', auth.authMiddleware, async (req, res) => {
     user.completedActivities = user.completedActivities.filter(a => String(a.originalId) !== String(todo._id));
 
     if (!wasCompleted && nowCompleted) {
-      const snapshot = {
-        originalId: todo._id,
-        title: todo.title || '',
-        description: todo.description || '',
-        completedAt: new Date(),
-        cardId: todo.parentId || null,
-        cardTitle: null,
-        cardColor: null
-      };
-      try {
-        // attempt to infer card title/color from other todos
-        const cardObj = user.todos.find(c => String(c._id) === String(snapshot.cardId));
-        if (cardObj) {
-          snapshot.cardTitle = cardObj.title || null;
-          snapshot.cardColor = cardObj.color || null;
-        }
-      } catch (_) {}
-      // push latest snapshot to the front
-      user.completedActivities.unshift(snapshot);
-      // keep a reasonable cap
-      if (user.completedActivities.length > 200) user.completedActivities = user.completedActivities.slice(0, 200);
+      // Do not store snapshots for recurring activities; they should not be recoverable
+      if (!todo.recurring) {
+        const snapshot = {
+          originalId: todo._id,
+          title: todo.title || '',
+          description: todo.description || '',
+          completedAt: new Date(),
+          cardId: todo.parentId || null,
+          cardTitle: null,
+          cardColor: null
+        };
+        try {
+          // attempt to infer card title/color from other todos
+          const cardObj = user.todos.find(c => String(c._id) === String(snapshot.cardId));
+          if (cardObj) {
+            snapshot.cardTitle = cardObj.title || null;
+            snapshot.cardColor = cardObj.color || null;
+          }
+        } catch (_) {}
+        // push latest snapshot to the front
+        user.completedActivities.unshift(snapshot);
+        // keep a reasonable cap
+        if (user.completedActivities.length > 200) user.completedActivities = user.completedActivities.slice(0, 200);
+      }
     }
     // if was completed and now un-completed, we've already removed existing snapshots above
   } catch (e) {
@@ -95,8 +109,64 @@ router.put('/:id', auth.authMiddleware, async (req, res) => {
   }
 
   await user.save();
-  // respond with the updated todo
-  res.json(todo);
+  // If the todo was just completed and is recurring, create the next occurrence
+  let newTodo = null;
+  try {
+    const nowCompleted = !!todo.completed;
+    if (!wasCompleted && nowCompleted && todo.recurring) {
+      // helper: map weekdays strings to numbers and compute next occurrence
+      function weekdayStringToNumber(s) {
+        const map = { dom:0, seg:1, ter:2, qua:3, qui:4, sex:5, sab:6 };
+        return map[String(s).toLowerCase()] ?? null;
+      }
+      function getNextDueForWeekdays(baseDate, weekdaysArr) {
+        if (!Array.isArray(weekdaysArr) || weekdaysArr.length === 0) return null;
+        const nums = weekdaysArr.map(weekdayStringToNumber).filter(n => n !== null);
+        if (nums.length === 0) return null;
+        const base = new Date(baseDate);
+        const hour = base.getHours();
+        const minute = base.getMinutes();
+        const second = base.getSeconds();
+        for (let i = 1; i <= 14; i++) {
+          const cand = new Date(base);
+          cand.setDate(base.getDate() + i);
+          if (nums.includes(cand.getDay())) {
+            cand.setHours(hour, minute, second, 0);
+            return cand;
+          }
+        }
+        return null;
+      }
+
+      let nextDue = null;
+      if (Array.isArray(todo.weekdays) && todo.weekdays.length > 0) {
+        nextDue = getNextDueForWeekdays(todo.dueDate || new Date(), todo.weekdays);
+      }
+      if (!nextDue) {
+        nextDue = todo.dueDate ? new Date(todo.dueDate) : new Date();
+        nextDue.setDate(nextDue.getDate() + 1);
+      }
+
+      const created = {
+        title: todo.title,
+        description: todo.description || '',
+        parentId: todo.parentId || null,
+        name: todo.name || '',
+        recurring: true,
+        weekdays: Array.isArray(todo.weekdays) ? todo.weekdays : [],
+        dueDate: nextDue,
+        color: todo.color || '#000000'
+      };
+      user.todos.push(created);
+      await user.save();
+      newTodo = user.todos[user.todos.length - 1];
+    }
+  } catch (e) {
+    console.error('Failed to create next recurring occurrence', e);
+  }
+
+  // respond with the updated todo and optional newly created occurrence
+  res.json({ updated: todo, newTodo });
 });
 
 // DELETE /api/todos/:id

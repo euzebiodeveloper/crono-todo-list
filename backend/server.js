@@ -54,7 +54,15 @@ async function start() {
 
     await mongoose.connect(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true });
 
-    app.listen(PORT, () => {});
+    // start background jobs
+    try {
+      const overdueScanner = require('./src/jobs/overdueScanner');
+      overdueScanner.start();
+    } catch (err) {
+      console.error('Failed to start overdueScanner job:', err);
+    }
+
+    app.listen(PORT, () => { });
   } catch (err) {
     console.error('Failed to start server:', err);
     process.exit(1);

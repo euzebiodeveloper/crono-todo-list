@@ -98,7 +98,19 @@ export default function Atividades() {
                 setTodos(prev => Array.isArray(prev) ? prev.filter(x => String(x._id) !== String(id)) : prev)
                 try {
                   const body = await (res.json ? res.json() : Promise.resolve(null))
-                  if (body && body._id) saveCompletedActivity(body)
+                  // backend may return either the updated todo object or { updated, newTodo }
+                  const snapshotSource = body && body._id ? body : (body && body.updated ? body.updated : null)
+                  if (snapshotSource && snapshotSource._id) saveCompletedActivity(snapshotSource)
+                  // if server created a new recurring occurrence, insert it into state so UI updates immediately
+                  if (body && body.newTodo && body.newTodo._id) {
+                    setTodos(prev => {
+                      const copy = Array.isArray(prev) ? [...prev] : []
+                      // prepend newTodo (keep dedupe)
+                      const exists = copy.find(x => String(x._id) === String(body.newTodo._id))
+                      if (!exists) copy.unshift(body.newTodo)
+                      return copy
+                    })
+                  }
                   // notify user
                   try { toast.success('Atividade concluída') } catch (_) {}
                 } catch (_) {}
@@ -135,6 +147,8 @@ export default function Atividades() {
   function saveCompletedActivity(activity) {
     try {
       if (!activity) return
+      // Do not persist completed snapshots for recurring activities
+      try { if (activity.recurring) return } catch (_) {}
       const key = 'completedActivitiesLog'
       const raw = localStorage.getItem(key)
       let arr = []
@@ -186,7 +200,29 @@ export default function Atividades() {
       const key = 'completedActivitiesLog'
       const raw = localStorage.getItem(key)
       const arr = raw ? JSON.parse(raw) : []
-      const list = Array.isArray(arr) ? arr : []
+      let list = Array.isArray(arr) ? arr : []
+      // Filter out local snapshots that belong to recurring todos (they should not be recoverable)
+      try {
+        const serverTodos = await fetchTodos()
+        if (Array.isArray(serverTodos)) {
+          const filtered = []
+          for (const it of list) {
+            try {
+              if (!it || !it.id) { filtered.push(it); continue }
+              const orig = serverTodos.find(t => String(t._id) === String(it.id))
+              if (orig && orig.recurring) {
+                // skip recurring originals
+                continue
+              }
+              filtered.push(it)
+            } catch (_) { filtered.push(it) }
+          }
+          if (filtered.length !== list.length) {
+            list = filtered
+            try { localStorage.setItem(key, JSON.stringify(list)) } catch (_) {}
+          }
+        }
+      } catch (_) {}
       // backfill missing cardTitle/cardColor when possible (card still exists)
       let changed = false
       try {
@@ -874,6 +910,12 @@ export default function Atividades() {
                       <ul style={{ padding: 0, listStyle: 'none', margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
                           {pageItems.map((a, idx) => {
                           const cardObj = a.cardId ? cards.find(c => String(c._id) === String(a.cardId)) : null
+                          // determine if the original todo (if present) is recurring — if so, do not allow recovery
+                          let origIsRecurring = false
+                          try {
+                            const orig = todos && Array.isArray(todos) ? todos.find(t => String(t._id) === String(a.id)) : null
+                            if (orig && orig.recurring) origIsRecurring = true
+                          } catch (_) {}
                           // Prefer snapshot from the completed record (cardTitle/cardColor) when present
                           // Prefer the live card data when available so edits to the card
                           // (like color/title) immediately reflect in the completed list.
@@ -895,10 +937,17 @@ export default function Atividades() {
                               </div>
                               <div className="completed-right" style={{ whiteSpace: 'nowrap', textAlign: 'right', minWidth: 160 }}>
                                 <div className="completed-date completed-date-right" style={{ fontSize: 13, fontWeight: 700 }}>{formatCompletedAt(a.completedAt)}</div>
-                                {cardObj && (
+                                {cardObj && !origIsRecurring && (
                                   <div style={{ marginTop: 8 }}>
                                     <button className="btn" type="button" onClick={() => recoverCompletedActivity(a)} disabled={recoveringIds.has(a.id)} style={{ padding: '6px 10px', fontSize: 13 }}>
                                       {recoveringIds.has(a.id) ? 'Recuperando...' : 'Recuperar'}
+                                    </button>
+                                  </div>
+                                )}
+                                {origIsRecurring && (
+                                  <div style={{ marginTop: 8 }}>
+                                    <button className="btn" type="button" disabled style={{ padding: '6px 10px', fontSize: 13, opacity: 0.6, cursor: 'default' }}>
+                                      Não recuperável
                                     </button>
                                   </div>
                                 )}

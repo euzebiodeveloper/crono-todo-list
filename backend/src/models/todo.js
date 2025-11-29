@@ -11,6 +11,9 @@ const TodoSchema = new mongoose.Schema({
   recurring: { type: Boolean, default: false },
   weekdays: { type: [String], default: [] }, // e.g. ['mon','wed']
   dueDate: { type: Date },
+  // tracking for overdue notification emails
+  overdueEmailCount: { type: Number, default: 0 },
+  lastOverdueEmailAt: { type: Date, default: null },
   createdAt: { type: Date, default: Date.now }
 });
 
