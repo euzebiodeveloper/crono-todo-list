@@ -374,10 +374,10 @@ nav a:hover, nav a:focus {
 }
 
 /* example cards and urgency coloring */
-.example-cards { display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+.crono-cards { display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
 
 	.site-header { padding: 16px 20px; }
-.example-card {
+.crono-card {
 	/* keep width fixed but avoid flex-basis affecting height (some containers use column axis) */
 	flex: 0 1 auto;
 	padding: 10px 12px;
@@ -420,7 +420,7 @@ nav a:hover, nav a:focus {
 }
     
 		/* elevated style applied while a card is sliding (FLIP moving) */
-		.example-card.moving {
+		.crono-card.moving {
 			box-shadow: 0 26px 54px rgba(2,8,12,0.26);
 			transform-origin: center;
 			border-radius: 12px;
@@ -428,7 +428,7 @@ nav a:hover, nav a:focus {
 
 		/* while a card is moving (FLIP), disable the entrance animation to avoid
 			 lateral slide or flicker; the FLIP transform handles the visual movement */
-		.example-card.moving.animate-in {
+		.crono-card.moving.animate-in {
 			animation: none !important;
 		}
 
@@ -437,7 +437,7 @@ nav a:hover, nav a:focus {
   from { opacity: 0; transform: translateX(-18px); }
   to { opacity: 1; transform: translateX(0); }
 }
-.example-card.animate-in {
+.crono-card.animate-in {
 	animation-name: slideInFromLeft;
 	animation-duration: 360ms;
 	animation-timing-function: cubic-bezier(.2,.9,.2,1);
@@ -445,22 +445,22 @@ nav a:hover, nav a:focus {
 }
 
 /* indicate the whole card is clickable */
-.example-card { cursor: pointer; }
+.crono-card { cursor: pointer; }
 
 /* full-card background for urgency classes (fills entire card) */
-.example-card.urgency-low {
+.crono-card.urgency-low {
 	background: linear-gradient(180deg,#2ecc71 0%, #27ae60 100%);
 	color: #ffffff;
 }
-.example-card.urgency-medium {
+.crono-card.urgency-medium {
 	background: linear-gradient(180deg,#f1c40f 0%, #e0b700 100%);
 	color: #07202a;
 }
-.example-card.urgency-orange {
+.crono-card.urgency-orange {
     background: linear-gradient(180deg,#ff7f0e 0%, #e86d00 100%);
     color: #07202a;
 }
-.example-card.urgency-high {
+.crono-card.urgency-high {
 	background: linear-gradient(180deg,#e74c3c 0%, #c0392b 100%);
 	color: #ffffff;
 	position: relative; /* allow z-index to take effect */
@@ -468,13 +468,13 @@ nav a:hover, nav a:focus {
 	box-shadow: 0 28px 60px rgba(10,41,60,0.22);
 }
 
-.example-card:hover { transform: translateY(-6px); box-shadow: 0 22px 44px rgba(10,41,60,0.14); }
+.crono-card:hover { transform: translateY(-6px); box-shadow: 0 22px 44px rgba(10,41,60,0.14); }
 
 .ec-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
 .ec-meta { font-size: 13px; opacity: 0.9; }
 
 /* compact card layout */
-.example-card.compact { padding: 8px 40px; }
+.crono-card.compact { padding: 8px 40px; }
 .ec-left { display: flex; flex-direction: column; gap: 4px; }
 .ec-title { font-weight: 700; font-size: 26px; line-height: 1.05; display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .ec-sub { font-size: 18px; opacity: 0.94; line-height: 1.08; }
@@ -485,11 +485,11 @@ nav a:hover, nav a:focus {
 .icon-btn svg { display: block; }
 
 /* adjust subtext color depending on urgency for readability */
-.example-card.urgency-low .ec-sub,
-.example-card.urgency-high .ec-sub { color: rgba(255,255,255,0.95); }
-.example-card.urgency-medium .ec-sub { color: rgba(0,0,0,0.82); }
+.crono-card.urgency-low .ec-sub,
+.crono-card.urgency-high .ec-sub { color: rgba(255,255,255,0.95); }
+.crono-card.urgency-medium .ec-sub { color: rgba(0,0,0,0.82); }
 
-.example-card .ec-badge {
+.crono-card .ec-badge {
     display: inline-flex;
     flex-direction: column;
     align-items: center;
@@ -503,12 +503,12 @@ nav a:hover, nav a:focus {
     background: rgba(255,255,255,0.12);
     color: inherit;
 }
-.example-card.urgency-medium .ec-badge { background: rgba(255,255,255,0.96); color: var(--accent); }
-.example-card.urgency-low .ec-badge { background: rgba(255,255,255,0.18); }
-.example-card.urgency-high .ec-badge { background: rgba(255,255,255,0.18); }
+.crono-card.urgency-medium .ec-badge { background: rgba(255,255,255,0.96); color: var(--accent); }
+.crono-card.urgency-low .ec-badge { background: rgba(255,255,255,0.18); }
+.crono-card.urgency-high .ec-badge { background: rgba(255,255,255,0.18); }
 
 /* single static sea-wave overlay (large, at bottom of card) */
-.example-card::before {
+.crono-card::before {
 	content: '';
 	position: absolute;
 	inset: 0;
@@ -522,7 +522,7 @@ nav a:hover, nav a:focus {
 	mix-blend-mode: screen;
 	opacity: 0.82;
 }
-.example-card::before {
+.crono-card::before {
 	content: '';
 	position: absolute;
 	inset: 0;
@@ -543,10 +543,10 @@ nav a:hover, nav a:focus {
 }
 
 /* compact variant: ensure minimum height but allow growth */
-.example-card.compact { min-height: 100px; }
+.crono-card.compact { min-height: 100px; }
 
 /* compact variant adjusted to match larger typography */
-.example-card.compact { min-height: 120px; padding: 12px 20px; }
+.crono-card.compact { min-height: 120px; padding: 12px 20px; }
 
 /* priority dash removed: the card's `::after` animated left border (which
    uses `--card-color` and `--card-urgency-color`) now shows urgency. */
@@ -557,7 +557,7 @@ nav a:hover, nav a:focus {
 	50% { transform: translateY(-6px); }
 	100% { transform: translateY(0); }
 }
-.example-card.urgency-high { animation: floatSlow 3s ease-in-out infinite; }
+.crono-card.urgency-high { animation: floatSlow 3s ease-in-out infinite; }
 
 /* static wave: no animation required */
 
@@ -1128,7 +1128,7 @@ nav a:hover, nav a:focus {
 }
 
 /* Example step card variant: compact, horizontal, matches other example cards' visual style */
-.example-step-card {
+.crono-step-card {
 	background: var(--card);
 	border: 1px solid rgba(10,41,60,0.06);
 	box-shadow: 0 12px 30px rgba(10,41,60,0.04);
@@ -1142,7 +1142,7 @@ nav a:hover, nav a:focus {
 	min-width: 260px;
 	text-align: left;
 }
-.example-step-card .step-icon {
+.crono-step-card .step-icon {
 	width: 48px;
 	height: 48px;
 	display: flex;
@@ -1152,18 +1152,18 @@ nav a:hover, nav a:focus {
 	border-radius: 10px;
 	box-shadow: none;
 }
-.example-step-card .card-dot {
+.crono-step-card .card-dot {
 	width: 14px;
 	height: 14px;
 	border-radius: 50%;
 	display: inline-block;
 }
-.example-step-card .step-body { flex: 1 1 auto; }
-.example-step-card .step-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
-.example-step-card .step-desc { font-size: 13px; color: var(--muted); margin: 0; }
+.crono-step-card .step-body { flex: 1 1 auto; }
+.crono-step-card .step-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.crono-step-card .step-desc { font-size: 13px; color: var(--muted); margin: 0; }
 
 @media (max-width: 900px) {
-	.example-step-card { width: 100%; min-width: 0; }
+	.crono-step-card { width: 100%; min-width: 0; }
 }
 
 /* Ensure example cards stack vertically and occupy full width on smaller screens */
@@ -1171,7 +1171,7 @@ nav a:hover, nav a:focus {
 .section-examples .examples-row { margin-top: 12px; }
 @media (max-width: 700px) {
 	.examples-row { flex-direction: column; gap: 12px; }
-	.examples-row .example-step-card { width: 100%; min-width: 100%; }
+	.examples-row .crono-step-card { width: 100%; min-width: 100%; }
 }
 
 @media (min-width: 900px) {
@@ -1254,11 +1254,11 @@ nav a:hover, nav a:focus {
 	.section-features .cards.column { grid-template-columns: 1fr; }
 }
 
-/* example list: each example-card becomes a full-width stacked section within the inner container */
-.example-list { display: flex; flex-direction: column; gap: 28px; }
+/* example list: each crono-card becomes a full-width stacked section within the inner container */
+.crono-list { display: flex; flex-direction: column; gap: 28px; }
 
 /* Make example cards occupy full width of the content area */
-.example-list > .example-card {
+.crono-list > .crono-card {
 	width: 100%;
 	padding: 18px 20px;
 	min-height: 160px;
@@ -1268,13 +1268,13 @@ nav a:hover, nav a:focus {
 }
 
 /* If there are multiple cards, make the middle one visually highlighted as 'medium' (yellow) */
-.example-list > .example-card:nth-child(2) {
+.crono-list > .crono-card:nth-child(2) {
 	background: linear-gradient(180deg,#f1c40f 0%, #e0b700 100%);
 	color: #07202a;
 	box-shadow: 0 18px 44px rgba(10,41,60,0.12);
 }
 
-.example-card.full-width { width: 100%; }
+.crono-card.full-width { width: 100%; }
 
 @media (min-width: 900px) {
 	/* slightly larger paddings on desktop */
@@ -1359,7 +1359,7 @@ nav a:hover, nav a:focus {
 }
 
 @media (max-width: 480px) {
-	.example-card::before {
+	.crono-card::before {
 		/* mobile: further reduce heights so waves don't overwhelm small cards */
 		background-size: 100% 100%, 100% 150%, 100% 170%;
 		background-position: 0 60%, 0 84%, 0 100%;
@@ -1436,7 +1436,7 @@ nav a:hover, nav a:focus {
 	.header-nav.open > *:nth-child(5) { animation-delay: 320ms }
 
 	/* Mobile: stack card content so title and dates/badge move below title/meta */
-	.example-card {
+	.crono-card {
 		flex-direction: column;
 		align-items: flex-start;
 		gap: 8px;
@@ -1538,11 +1538,11 @@ input:focus, button:focus, a:focus { outline: 3px solid rgba(10,41,60,0.08); out
 }
 
 /* animated left border that pulses from the card's color to white and back */
-.example-card.empty-card {
+.crono-card.empty-card {
 	/* width of the animated left bar (can be overridden per-card via inline var) */
 	--left-border-width: 12px;
 }
-.example-card.empty-card::after {
+.crono-card.empty-card::after {
 	content: '';
 	position: absolute;
 	left: 0;
@@ -1558,8 +1558,8 @@ input:focus, button:focus, a:focus { outline: 3px solid rgba(10,41,60,0.08); out
 }
 
 /* make the card content start immediately after the animated bar (no extra gap) */
-.example-card.empty-card.compact,
-.example-card.empty-card {
+.crono-card.empty-card.compact,
+.crono-card.empty-card {
 	/* leave a bit of breathing room after the animated bar */
 	padding-left: calc(var(--left-border-width) + 10px);
 }
@@ -1571,20 +1571,20 @@ input:focus, button:focus, a:focus { outline: 3px solid rgba(10,41,60,0.08); out
 }
 
 /* ensure card content sits above the animated border */
-.example-card .ec-left, .example-card .ec-right { position: relative; z-index: 2; }
+.crono-card .ec-left, .crono-card .ec-right { position: relative; z-index: 2; }
 
 /* Removing animation for delete feedback */
 @keyframes removeFade {
 	0% { opacity: 1; transform: scale(1); }
 	100% { opacity: 0; transform: scale(0.96) translateY(-6px); }
 }
-.example-card.removing { animation: removeFade 420ms ease both; }
+.crono-card.removing { animation: removeFade 420ms ease both; }
 
 /* When a card is colored, force text and icon color to white for contrast */
-.example-card.colored { color: #fff; }
-.example-card.colored .ec-title,
-.example-card.colored .ec-sub { color: #fff !important; }
-.example-card.colored .icon-btn { color: #fff !important; }
-.example-card.colored .icon-btn svg { stroke: currentColor; }
+.crono-card.colored { color: #fff; }
+.crono-card.colored .ec-title,
+.crono-card.colored .ec-sub { color: #fff !important; }
+.crono-card.colored .icon-btn { color: #fff !important; }
+.crono-card.colored .icon-btn svg { stroke: currentColor; }
 
 

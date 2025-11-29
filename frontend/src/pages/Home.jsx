@@ -109,7 +109,7 @@ export default function Home() {
           </ul>
 
           <div className="examples-row" style={{ display: 'flex', gap: 12, marginTop: 12, flexWrap: 'wrap' }}>
-            <article className="step-card example-step-card">
+            <article className="step-card crono-step-card">
               <div className="step-icon" aria-hidden>
                 <span className="card-dot" style={{ background: '#bdbdbd' }} />
               </div>
@@ -119,7 +119,7 @@ export default function Home() {
               </div>
             </article>
 
-            <article className="step-card example-step-card">
+            <article className="step-card crono-step-card">
               <div className="step-icon" aria-hidden>
                 <span className="card-dot" style={{ background: '#27ae60' }} />
               </div>
@@ -129,7 +129,7 @@ export default function Home() {
               </div>
             </article>
 
-            <article className="step-card example-step-card">
+            <article className="step-card crono-step-card">
               <div className="step-icon" aria-hidden>
                 <span className="card-dot" style={{ background: '#f1c40f' }} />
               </div>
@@ -139,7 +139,7 @@ export default function Home() {
               </div>
             </article>
 
-            <article className="step-card example-step-card">
+            <article className="step-card crono-step-card">
               <div className="step-icon" aria-hidden>
                 <span className="card-dot" style={{ background: '#ff7f0e' }} />
               </div>
@@ -149,7 +149,7 @@ export default function Home() {
               </div>
             </article>
 
-            <article className="step-card example-step-card">
+            <article className="step-card crono-step-card">
               <div className="step-icon" aria-hidden>
                 <span className="card-dot" style={{ background: '#d62728' }} />
               </div>

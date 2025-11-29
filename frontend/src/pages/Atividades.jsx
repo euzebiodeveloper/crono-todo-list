@@ -44,6 +44,7 @@ export default function Atividades() {
   const [editingCard, setEditingCard] = useState(null)
   const [editingTitle, setEditingTitle] = useState('')
   const [editingDesc, setEditingDesc] = useState('')
+  const [editingColor, setEditingColor] = useState('#000000')
   
   const [editingLoading, setEditingLoading] = useState(false)
   const [removingId, setRemovingId] = useState(null)
@@ -573,11 +574,32 @@ export default function Atividades() {
     }
     setEditingLoading(true)
     try {
-      const res = await updateTodo(editingCard._id, { title: editingTitle, description: editingDesc })
+      const res = await updateTodo(editingCard._id, { title: editingTitle, description: editingDesc, color: editingColor })
       if (res && (res.status === 200 || res.ok)) {
         toast.success('Alterações salvas com sucesso')
         const t = await fetchTodos()
         setTodos(Array.isArray(t) ? t : [])
+        // Update completed activities log (localStorage) so previously completed items
+        // that belong to this card use the updated color/title when shown/recovered.
+        try {
+          const key = 'completedActivitiesLog'
+          const raw = localStorage.getItem(key)
+          const arr = raw ? JSON.parse(raw) : []
+          let changed = false
+          if (Array.isArray(arr)) {
+            for (const it of arr) {
+              if (it && it.cardId && String(it.cardId) === String(editingCard._id)) {
+                it.cardColor = editingColor
+                it.cardTitle = editingTitle
+                changed = true
+              }
+            }
+            if (changed) {
+              localStorage.setItem(key, JSON.stringify(arr))
+              try { setCompletedActivities(prev => Array.isArray(prev) ? prev.map(it => (it && it.cardId && String(it.cardId) === String(editingCard._id) ? ({ ...it, cardColor: editingColor, cardTitle: editingTitle }) : it)) : prev) } catch (_) {}
+            }
+          }
+        } catch (_) {}
         // fechar modal após breve delay para o usuário ver a confirmação
         setTimeout(() => {
           setEditingCard(null)
@@ -689,6 +711,14 @@ export default function Atividades() {
                 <h3 style={{ marginTop: 0 }}>Editar cartão</h3>
                 <input value={editingTitle} onChange={e => setEditingTitle(e.target.value)} placeholder="Título do cartão" />
                 <textarea value={editingDesc} onChange={e => setEditingDesc(e.target.value)} placeholder="Descrição (opcional)" rows={5} />
+                <div style={{ marginTop: 8 }}>
+                  <div style={{ fontWeight: 700, marginBottom: 6 }}>Cor do cartão</div>
+                  <div className="color-palette" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {['#000000','#1f77b4','#ff7f0e','#2ca02c','#d62728','#9467bd','#8c564b','#e377c2','#7f7f7f','#17becf'].map(c => (
+                      <button key={c} type="button" className={"color-swatch" + (editingColor === c ? ' selected' : '')} onClick={() => setEditingColor(c)} style={{ background: c }} aria-label={`Cor ${c}`} />
+                    ))}
+                  </div>
+                </div>
                 <div style={{ display: 'flex', gap: 8, marginTop: 12, alignItems: 'center' }}>
                   <button className="btn" onClick={saveEditing} disabled={editingLoading}>{editingLoading ? 'Salvando...' : 'Salvar'}</button>
                   <button className="btn secondary" onClick={cancelEditing} disabled={editingLoading}>Cancelar</button>
@@ -782,7 +812,7 @@ export default function Atividades() {
                   key={t._id}
                   onClick={() => setViewCard(t)}
                   ref={el => { if (el) cardNodes.current.set(String(t._id), el); else cardNodes.current.delete(String(t._id)) }}
-                  className={`example-card compact empty-card ${t.color ? 'colored' : ''} ${removingId === t._id ? ' removing' : ''}`}
+                  className={`crono-card compact empty-card ${t.color ? 'colored' : ''} ${removingId === t._id ? ' removing' : ''}`}
                   style={{ background: t.color || undefined, color: t.color ? '#fff' : undefined, ['--card-color']: t.color || '#000', ['--card-urgency-color']: dashTarget || '#ffffff' }}
                 >
                   <div className="ec-left">
@@ -790,7 +820,7 @@ export default function Atividades() {
                     <span className="ec-sub muted">{t.description && String(t.description).trim().length > 0 ? t.description : (t.completed ? 'Concluída' : 'Sem descrição')}</span>
                   </div>
                   <div className="ec-right">
-                    <button className="icon-btn" title="Editar" onClick={(e) => { e.stopPropagation(); setEditingCard(t); setEditingTitle(t.title || ''); setEditingDesc(t.description || '') }}>
+                    <button className="icon-btn" title="Editar" onClick={(e) => { e.stopPropagation(); setEditingCard(t); setEditingTitle(t.title || ''); setEditingDesc(t.description || ''); setEditingColor(t.color || '#000000') }}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     </button>
                     <button className="icon-btn" title="Excluir" onClick={async (e) => { e.stopPropagation(); if (confirm('Excluir este cartão?')) {
@@ -845,8 +875,10 @@ export default function Atividades() {
                           {pageItems.map((a, idx) => {
                           const cardObj = a.cardId ? cards.find(c => String(c._id) === String(a.cardId)) : null
                           // Prefer snapshot from the completed record (cardTitle/cardColor) when present
-                          const cardTitle = a.cardTitle || (cardObj ? cardObj.title : (a.cardId ? '—' : '—'))
-                          const cardColor = a.cardColor || (cardObj ? (cardObj.color || '#000') : '#000')
+                          // Prefer the live card data when available so edits to the card
+                          // (like color/title) immediately reflect in the completed list.
+                          const cardTitle = (cardObj && cardObj.title) ? cardObj.title : (a.cardTitle || (a.cardId ? '—' : '—'))
+                          const cardColor = (cardObj && cardObj.color) ? cardObj.color : (a.cardColor || '#000')
                           const isExitingCompleted = completedExitingIds.has(String(a.id))
                           return (
                             <li key={a.id || (completedPage+'-'+idx)} className={(isExitingCompleted ? 'completed-item exit' : 'completed-item')} style={{ padding: 10, borderRadius: 8, background: 'rgba(0,0,0,0.03)', display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
