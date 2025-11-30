@@ -35,8 +35,14 @@ export default function TodoItem({ todo, onToggle, onDelete }) {
           onChange={() => onToggle(todo._id)}
           aria-label={`Marcar ${todo.title} como concluída`}
         />
-        <label htmlFor={checkboxId} style={{ cursor: 'pointer', flex: 1, margin: 0, textDecoration: todo.completed ? 'line-through' : 'none' }}>
+        <label htmlFor={checkboxId} style={{ cursor: 'pointer', flex: 1, margin: 0, display: 'flex', alignItems: 'center', gap: '8px', textDecoration: todo.completed ? 'line-through' : 'none' }}>
           {todo.title}
+          {todo.recurring && (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Atividade recorrente" title="Recorrente" style={{ flex: '0 0 auto', color: 'rgba(0,0,0,0.55)' }}>
+              <path d="M21 12a9 9 0 1 0-3 6.7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M21 3v6h-6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          )}
         </label>
       </div>
 

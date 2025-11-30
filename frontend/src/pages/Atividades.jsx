@@ -677,6 +677,11 @@ export default function Atividades() {
       toast.error('Para atividades recorrentes, selecione uma data/hora de entrega')
       return
     }
+    // If activity is recurring, at least one weekday must be selected
+    if (recurring && (!Array.isArray(weekdays) || weekdays.length === 0)) {
+      toast.error('Para atividades recorrentes, selecione ao menos um dia da semana')
+      return
+    }
     // If there are cards, a card selection is required
     if (cards && cards.length > 0 && (!selectedCardId || String(selectedCardId).trim() === '')) {
       toast.error('Selecione um cartão para a atividade')
@@ -1036,7 +1041,15 @@ export default function Atividades() {
                                 onChange={e => { updateActivityCompletion(r._id, e.target.checked); }}
                               />
                               <div style={{ flex: 1 }}>
-                                <div style={{ fontWeight: 700 }}>{r.title}</div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}>
+                                  {r.title}
+                                  {r.recurring && (
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Atividade recorrente" title="Recorrente" style={{ flex: '0 0 auto', color: 'rgba(0,0,0,0.55)' }}>
+                                      <path d="M21 12a9 9 0 1 0-3 6.7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                                      <path d="M21 3v6h-6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                                    </svg>
+                                  )}
+                                </div>
                                 <div className="muted" style={{ fontSize: 13 }}>{r.description || ''}</div>
                               </div>
                             </div>
