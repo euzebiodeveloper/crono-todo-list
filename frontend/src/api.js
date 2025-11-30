@@ -84,6 +84,29 @@ export async function resetPassword(payload) {
   return res.json()
 }
 
+export async function requestPasswordReset(payload) {
+  const res = await fetch(`${API_BASE}/auth/request-reset`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  return res.json()
+}
+
+export async function verifyResetCode(code) {
+  const res = await fetch(`${API_BASE}/auth/verify-reset/${code}`)
+  return res.json()
+}
+
+export async function performPasswordReset(code, payload) {
+  const res = await fetch(`${API_BASE}/auth/reset-password/${code}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  return res.json()
+}
+
 export async function fetchTodos() {
   const token = getAuthToken()
   const headers = token ? { Authorization: `Bearer ${token}` } : {}

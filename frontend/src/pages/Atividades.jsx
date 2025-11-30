@@ -52,6 +52,7 @@ export default function Atividades() {
   const [exitingIds, setExitingIds] = useState(new Set())
   const [pendingIds, setPendingIds] = useState(new Set())
   const [optimisticCompletedIds, setOptimisticCompletedIds] = useState(new Set())
+  const [deletingIds, setDeletingIds] = useState(new Set())
   const [enteringFromRightIds, setEnteringFromRightIds] = useState(new Set())
   const [completedExitingIds, setCompletedExitingIds] = useState(new Set())
   const [showCompletedModal, setShowCompletedModal] = useState(false)
@@ -671,6 +672,16 @@ export default function Atividades() {
       toast.error('Preencha o título')
       return
     }
+    // If activity is recurring, a due date is required
+    if (recurring && (!dueDate || String(dueDate).trim() === '')) {
+      toast.error('Para atividades recorrentes, selecione uma data/hora de entrega')
+      return
+    }
+    // If there are cards, a card selection is required
+    if (cards && cards.length > 0 && (!selectedCardId || String(selectedCardId).trim() === '')) {
+      toast.error('Selecione um cartão para a atividade')
+      return
+    }
     try {
       const payload = { title, name, recurring, weekdays, dueDate: dueDate ? dueDate : null }
       // if a card is selected, attach its id as parentId and also set name to card title for legacy matching
@@ -798,7 +809,6 @@ export default function Atividades() {
               {/* If there are cards, show a select to pick which card this activity belongs to. Otherwise allow free text name. */}
                 {cards && cards.length > 0 ? (
                 <select className="card-select" value={selectedCardId} onChange={e => { setSelectedCardId(e.target.value); const card = cards.find(c => c._id === e.target.value); setName(card ? card.title : ''); }}>
-                  <option value="">-- Selecionar cartão (opcional) --</option>
                   {cards.map(c => (
                     <option key={c._id} value={c._id} style={{ color: c.color || 'inherit' }}>{c.title}</option>
                   ))}
@@ -1010,18 +1020,73 @@ export default function Atividades() {
                       const isPending = pendingIds.has(r._id)
                       const entering = viewCard && !isExiting && !isPending
                       const enterRight = enteringFromRightIds.has(String(r._id))
+                      // determine if this exit is due to completion (optimisticCompletedIds set during complete flow)
+                      const isCompleting = isExiting && optimisticCompletedIds.has(r._id)
+                      // determine if this exit is due to explicit deletion
+                      const isDeleting = isExiting && deletingIds.has(r._id)
                       return (
-                        <li key={r._id} className={"activity-item" + (isExiting ? ' exit' : '') + (enterRight ? ' enter-right' : (entering ? ' animate-in' : ''))} style={{ padding: 10, borderRadius: 8, background: 'rgba(0,0,0,0.03)' }}>
+                        <li key={r._id} className={"activity-item" + (isExiting ? ' exit' : '') + (isCompleting ? ' completed-exit' : '') + (isDeleting ? ' deleting-exit' : '') + (enterRight ? ' enter-right' : (entering ? ' animate-in' : ''))} style={{ padding: 10, borderRadius: 8, background: 'rgba(0,0,0,0.03)' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
-                            <div style={{ flex: 1 }}>
-                              <div style={{ fontWeight: 700 }}>{r.title}</div>
-                              <div className="muted" style={{ fontSize: 13 }}>{r.description || ''}</div>
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12 }}>
+                              <input
+                                type="checkbox"
+                                aria-label={`Marcar ${r.title} como concluída`}
+                                checked={!!r.completed || optimisticCompletedIds.has(r._id)}
+                                disabled={isExiting || isPending}
+                                onChange={e => { updateActivityCompletion(r._id, e.target.checked); }}
+                              />
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontWeight: 700 }}>{r.title}</div>
+                                <div className="muted" style={{ fontSize: 13 }}>{r.description || ''}</div>
+                              </div>
                             </div>
                             <div className={"activity-actions" + (entering ? ' animate-in' : '')} style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                               <div className="muted" style={{ fontSize: 13 }}>{r.dueDate ? new Date(r.dueDate).toLocaleString() : ''}</div>
-                              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                                <input type="checkbox" aria-label={`Marcar ${r.title} como concluída`} checked={!!r.completed || optimisticCompletedIds.has(r._id)} disabled={isExiting || isPending} onChange={e => { updateActivityCompletion(r._id, e.target.checked); }} />
-                              </label>
+                              <button
+                                className="icon-btn"
+                                title="Excluir atividade"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  if (!confirm('Excluir esta atividade?')) return
+                                  // trigger exit animation first (slide to right)
+                                  setExitingIds(prev => {
+                                    const copy = new Set(prev)
+                                    copy.add(r._id)
+                                    return copy
+                                  })
+                                  // mark as deleting so we can style a red exit
+                                  setDeletingIds(prev => {
+                                    const copy = new Set(prev)
+                                    copy.add(r._id)
+                                    return copy
+                                  })
+                                  // wait for animation to complete then call API
+                                  setTimeout(async () => {
+                                    try {
+                                      const res = await deleteTodo(r._id)
+                                      if (res && (res.status === 204 || res.ok)) {
+                                        const fresh = await fetchTodos()
+                                        setTodos(Array.isArray(fresh) ? fresh : [])
+                                      }
+                                    } catch (err) {
+                                      console.error(err)
+                                    } finally {
+                                      setExitingIds(prev => {
+                                        const copy = new Set(prev)
+                                        copy.delete(r._id)
+                                        return copy
+                                      })
+                                      setDeletingIds(prev => {
+                                        const copy = new Set(prev)
+                                        copy.delete(r._id)
+                                        return copy
+                                      })
+                                    }
+                                  }, 380)
+                                }}
+                              >
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6h18" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M10 11v6M14 11v6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                              </button>
                             </div>
                           </div>
                         </li>

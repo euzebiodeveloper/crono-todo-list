@@ -7,6 +7,8 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import Atividades from './pages/Atividades'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 import { getAuthToken, clearAuthToken, setAuthToken, getAuthExpiry } from './api'
 
 export default function App() {
@@ -108,6 +110,8 @@ export default function App() {
             <Route path="/" element={<Home />} />
             <Route path="/about" element={<About />} />
             <Route path="/login" element={<Login onAuth={(token, remember=false) => { try { setAuthToken(token, remember) } catch(_){}; setIsAuthenticated(true); }} />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password/:code" element={<ResetPassword />} />
             <Route path="/register" element={<Register onAuth={(token) => { try { setAuthToken(token, false) } catch(_){}; setIsAuthenticated(true); }} />} />
             <Route path="/dashboard" element={<Dashboard onLogout={() => { clearAuthToken(); setIsAuthenticated(false); try { toast.info('Você saiu da conta') } catch (_) {} }} />} />
             <Route path="/atividades" element={<Atividades />} />

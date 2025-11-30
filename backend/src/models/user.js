@@ -31,6 +31,9 @@ const UserSchema = new mongoose.Schema({
     cardTitle: { type: String, default: null },
     cardColor: { type: String, default: null }
   }, { _id: false })], default: [] },
+  // password reset token and expiry (optional)
+  resetPasswordCode: { type: String, default: null },
+  resetPasswordExpires: { type: Date, default: null },
   createdAt: { type: Date, default: Date.now }
 });
 

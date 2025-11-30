@@ -54,6 +54,9 @@ export default function Login({ onAuth }) {
             </label>
 
             <button type="submit" className="btn" disabled={loading}>{loading ? 'Entrando...' : 'Entrar'}</button>
+            <div style={{ marginTop: 8 }}>
+              <a href="/forgot-password" style={{ fontSize: 14 }}>Esqueci minha senha</a>
+            </div>
           </form>
           
         </div>

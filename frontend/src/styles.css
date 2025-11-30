@@ -784,6 +784,26 @@ nav a:hover, nav a:focus {
 	animation: slideOutItem 360ms cubic-bezier(.2,.9,.2,1) both !important;
 }
 
+/* when exiting because the activity was completed, give a green background during the animation */
+.activity-item.exit.completed-exit {
+	animation: slideOutItem 360ms cubic-bezier(.2,.9,.2,1) both !important;
+	background: #7effa7 !important;
+	color: #0b5a2f !important;
+}
+.activity-item.exit.completed-exit .muted {
+	color: rgba(11,90,47,0.85) !important;
+}
+
+/* when exiting because the activity was deleted, give a red background during the animation */
+.activity-item.exit.deleting-exit {
+	animation: slideOutItem 360ms cubic-bezier(.2,.9,.2,1) both !important;
+	background: #ff5340 !important;
+	color: #8a1f1f !important;
+}
+.activity-item.exit.deleting-exit .muted {
+	color: rgba(138,31,31,0.85) !important;
+}
+
 @keyframes slideOutItem {
 	0% { transform: translateX(0); opacity: 1 }
 	100% { transform: translateX(26%); opacity: 0 }

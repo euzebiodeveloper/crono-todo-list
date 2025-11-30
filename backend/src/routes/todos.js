@@ -178,8 +178,14 @@ router.delete('/:id', auth.authMiddleware, async (req, res) => {
   if (!user) return res.status(404).json({ error: 'User not found' });
   const todo = user.todos.id(id);
   if (!todo) return res.status(404).json({ error: 'Todo not found' });
-  todo.remove();
-  await user.save();
+  // Remove embedded todo from the user's todos array.
+  try {
+    user.todos = (user.todos || []).filter(t => String(t._id) !== String(id));
+    await user.save();
+  } catch (err) {
+    console.error('Failed to remove todo', err);
+    return res.status(500).json({ error: 'Failed to remove todo' });
+  }
   res.status(204).send();
 });
 

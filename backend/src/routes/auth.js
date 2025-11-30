@@ -3,6 +3,8 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/user');
+const crypto = require('crypto');
+const { sendEmail } = require('../utils/email');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 
@@ -125,3 +127,81 @@ router.post('/reset-password', authMiddleware, async (req, res) => {
 module.exports = router;
 // also expose the auth middleware so other routes can protect endpoints
 module.exports.authMiddleware = authMiddleware;
+
+// POST /api/auth/request-reset - request a password reset email
+router.post('/request-reset', async (req, res) => {
+  try {
+    const { email } = req.body || {}
+    if (!email) return res.status(400).json({ error: 'Missing email' })
+    const user = await User.findOne({ email: String(email).toLowerCase().trim() })
+    if (!user) {
+      // respond 200 to avoid leaking which emails are registered
+      return res.json({ ok: true })
+    }
+
+    // generate a reset code and expiry (1 hour)
+    const code = crypto.randomBytes(20).toString('hex')
+    const expires = new Date(Date.now() + (60 * 60 * 1000))
+    user.resetPasswordCode = code
+    user.resetPasswordExpires = expires
+    await user.save()
+
+    // send email with link
+    const frontendBase = process.env.FRONTEND_URL || 'http://localhost:5173'
+    const resetUrl = `${frontendBase.replace(/\/$/, '')}/reset-password/${code}`
+    const html = `Olá ${user.name || ''},<br/><br/>Recebemos uma solicitação para redefinir sua senha. Clique no link abaixo para continuar:<br/><a href="${resetUrl}">${resetUrl}</a><br/><br/>Se você não solicitou, ignore este e-mail.`
+    try {
+      await sendEmail(user.email, 'Redefinir senha', html)
+    } catch (e) {
+      console.error('Failed to send reset email', e)
+    }
+
+    return res.json({ ok: true })
+  } catch (err) {
+    console.error('Request reset error', err)
+    return res.status(500).json({ error: 'Erro ao processar solicitação' })
+  }
+})
+
+// GET /api/auth/verify-reset/:code - verify reset code exists and not expired
+router.get('/verify-reset/:code', async (req, res) => {
+  try {
+    const { code } = req.params
+    if (!code) return res.status(400).json({ error: 'Missing code' })
+    const user = await User.findOne({ resetPasswordCode: code })
+    if (!user) return res.status(404).json({ error: 'Código inválido' })
+    if (!user.resetPasswordExpires || new Date(user.resetPasswordExpires) < new Date()) return res.status(410).json({ error: 'Código expirado' })
+    return res.json({ ok: true, user: { name: user.name, email: user.email } })
+  } catch (err) {
+    console.error('Verify reset error', err)
+    return res.status(500).json({ error: 'Erro ao verificar código' })
+  }
+})
+
+// POST /api/auth/reset-password/:code - perform password reset using code
+router.post('/reset-password/:code', async (req, res) => {
+  try {
+    const { code } = req.params
+    const { newPassword } = req.body || {}
+    if (!code) return res.status(400).json({ error: 'Missing code' })
+    if (!newPassword) return res.status(400).json({ error: 'Missing newPassword' })
+
+    // enforce strong new password
+    const strongPw = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/
+    if (!strongPw.test(String(newPassword))) return res.status(400).json({ error: 'Senha fraca: mínimo 8 caracteres, incluindo letras maiúsculas, minúsculas e caracteres especiais' })
+
+    const user = await User.findOne({ resetPasswordCode: code })
+    if (!user) return res.status(404).json({ error: 'Código inválido' })
+    if (!user.resetPasswordExpires || new Date(user.resetPasswordExpires) < new Date()) return res.status(410).json({ error: 'Código expirado' })
+
+    const salt = await bcrypt.genSalt(10);
+    user.passwordHash = await bcrypt.hash(newPassword, salt);
+    user.resetPasswordCode = null
+    user.resetPasswordExpires = null
+    await user.save()
+    return res.json({ ok: true })
+  } catch (err) {
+    console.error('Perform reset error', err)
+    return res.status(500).json({ error: 'Erro ao atualizar senha' })
+  }
+})
