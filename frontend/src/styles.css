@@ -968,7 +968,7 @@ nav a:hover, nav a:focus {
 	/* leave room for title, actions and paddings when calculating list max-height
 	   Reduce the list height so the modal header/actions remain visible on larger viewports.
 	   This is intentionally smaller than the previous value to better constrain long lists. */
-	max-height: calc(100vh - 320px);
+	max-height: calc(100vh - 500px);
 	overflow-y: auto;
 	-webkit-overflow-scrolling: touch;
 	padding-right: 8px; /* avoid content hiding under scrollbar */
@@ -976,13 +976,13 @@ nav a:hover, nav a:focus {
 
 @media (max-width: 900px) {
 	/* tablet: slightly less available vertical space than desktop */
-	.modal-content.card-modal ul { max-height: calc(100vh - 360px); }
+	.modal-content.card-modal ul { max-height: calc(100vh - 400px); }
 }
 
 @media (max-width: 700px) {
 	/* mobile: keep the list constrained but a bit taller than tablet to allow comfortable scrolling */
 	.modal-content.card-modal { max-height: calc(100vh - 24px); }
-	.modal-content.card-modal ul { max-height: calc(100vh - 400px); }
+	.modal-content.card-modal ul { max-height: calc(100vh - 500px); }
 }
 
 @media (max-width: 900px) {
