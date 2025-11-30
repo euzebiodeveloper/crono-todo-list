@@ -1032,7 +1032,7 @@ export default function Atividades() {
                       return (
                         <li key={r._id} className={"activity-item" + (isExiting ? ' exit' : '') + (isCompleting ? ' completed-exit' : '') + (isDeleting ? ' deleting-exit' : '') + (enterRight ? ' enter-right' : (entering ? ' animate-in' : ''))} style={{ padding: 10, borderRadius: 8, background: 'rgba(0,0,0,0.03)' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
-                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <div className="activity-col-checkbox" style={{ flex: '0 0 36px', display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
                               <input
                                 type="checkbox"
                                 aria-label={`Marcar ${r.title} como concluída`}
@@ -1040,8 +1040,11 @@ export default function Atividades() {
                                 disabled={isExiting || isPending}
                                 onChange={e => { updateActivityCompletion(r._id, e.target.checked); }}
                               />
-                              <div style={{ flex: 1 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}>
+                            </div>
+
+                            <div className="activity-col-main" style={{ flex: '1 1 auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                              <div className="activity-top" style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                   {r.title}
                                   {r.recurring && (
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Atividade recorrente" title="Recorrente" style={{ flex: '0 0 auto', color: 'rgba(0,0,0,0.55)' }}>
@@ -1050,11 +1053,12 @@ export default function Atividades() {
                                     </svg>
                                   )}
                                 </div>
-                                <div className="muted" style={{ fontSize: 13 }}>{r.description || ''}</div>
                               </div>
+                              <div className="activity-bottom muted" style={{ fontSize: 13 }}>{r.dueDate ? new Date(r.dueDate).toLocaleString() : ''}</div>
+                              <div className="muted" style={{ fontSize: 13 }}>{r.description || ''}</div>
                             </div>
-                            <div className={"activity-actions" + (entering ? ' animate-in' : '')} style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                              <div className="muted" style={{ fontSize: 13 }}>{r.dueDate ? new Date(r.dueDate).toLocaleString() : ''}</div>
+
+                            <div className={"activity-actions" + (entering ? ' animate-in' : '')} style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                               <button
                                 className="icon-btn"
                                 title="Excluir atividade"
