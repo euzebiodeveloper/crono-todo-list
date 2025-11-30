@@ -12,6 +12,12 @@ export default function ResetPassword() {
   const [newPassword, setNewPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  
+  // strong password: min 8 chars, at least 1 lowercase, 1 uppercase, 1 special char
+  const strongPw = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/
+  const isStrong = strongPw.test(String(newPassword))
+  const passwordsMatch = newPassword === confirm
+  
 
   useEffect(() => {
     let mounted = true
@@ -41,7 +47,8 @@ export default function ResetPassword() {
   async function handleSubmit(e) {
     e.preventDefault()
     if (!newPassword) return toast.error('Informe a nova senha')
-    if (newPassword !== confirm) return toast.error('As senhas não coincidem')
+    if (!isStrong) return toast.error('Senha fraca: mínimo 8 caracteres, incluindo letras maiúsculas, minúsculas e caracteres especiais')
+    if (!passwordsMatch) return toast.error('As senhas não coincidem')
     setSubmitting(true)
     try {
       const res = await performPasswordReset(code, { newPassword })
@@ -69,10 +76,10 @@ export default function ResetPassword() {
           <h2>Redefinir senha</h2>
           <p className="muted">Usuário: {user && user.name} — {user && user.email}</p>
           <form onSubmit={handleSubmit} className="auth-form">
-            <input type="password" placeholder="Nova senha" value={newPassword} onChange={e => setNewPassword(e.target.value)} disabled={submitting} />
+            <input type="password" placeholder="Nova senha" value={newPassword} onChange={e => { setNewPassword(e.target.value) }} disabled={submitting} />
             <input type="password" placeholder="Confirmar nova senha" value={confirm} onChange={e => setConfirm(e.target.value)} disabled={submitting} />
             <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn" type="submit" disabled={submitting}>{submitting ? 'Enviando...' : 'Atualizar senha'}</button>
+              <button className="btn" type="submit" disabled={submitting || !newPassword}>{submitting ? 'Enviando...' : 'Atualizar senha'}</button>
             </div>
           </form>
         </div>

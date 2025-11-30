@@ -149,7 +149,8 @@ input, textarea {
 	background: var(--card);
 	border-radius: 12px;
 	padding: 28px;
-	min-height: 420px; /* keep the requested min-height on larger screens */
+	min-height: 320px; /* reduced further to avoid large empty space on short forms */
+	/* keep content at the top of the card (no vertical centering) */
 	box-shadow: 0 20px 48px rgba(10,41,60,0.06);
 	border: 1px solid rgba(10,41,60,0.04);
 }

@@ -27,7 +27,7 @@ router.post('/register', async (req, res) => {
 
     // strong password: min 8 chars, at least 1 lowercase, 1 uppercase, 1 special char
     const strongPw = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/
-    if (!strongPw.test(String(password))) return res.status(400).json({ error: 'Senha fraca: mínimo 8 caracteres, incluindo letras maiúsculas, minúsculas e caracteres especiais' })
+    if (!strongPw.test(String(password))) return res.status(400).json({ error: 'Senha fraca' })
 
     const existing = await User.findOne({ email });
     if (existing) return res.status(409).json({ error: 'Email já cadastrado' });
@@ -112,7 +112,7 @@ router.post('/reset-password', authMiddleware, async (req, res) => {
 
     // enforce strong new password
     const strongPw = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/
-    if (!strongPw.test(String(newPassword))) return res.status(400).json({ error: 'Senha fraca: mínimo 8 caracteres, incluindo letras maiúsculas, minúsculas e caracteres especiais' })
+    if (!strongPw.test(String(newPassword))) return res.status(400).json({ error: 'Senha fraca' })
 
     const salt = await bcrypt.genSalt(10);
     user.passwordHash = await bcrypt.hash(newPassword, salt);
@@ -188,7 +188,7 @@ router.post('/reset-password/:code', async (req, res) => {
 
     // enforce strong new password
     const strongPw = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/
-    if (!strongPw.test(String(newPassword))) return res.status(400).json({ error: 'Senha fraca: mínimo 8 caracteres, incluindo letras maiúsculas, minúsculas e caracteres especiais' })
+    if (!strongPw.test(String(newPassword))) return res.status(400).json({ error: 'Senha fraca' })
 
     const user = await User.findOne({ resetPasswordCode: code })
     if (!user) return res.status(404).json({ error: 'Código inválido' })
