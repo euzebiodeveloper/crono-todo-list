@@ -29,7 +29,11 @@ const UserSchema = new mongoose.Schema({
     completedAt: { type: Date, default: Date.now },
     cardId: { type: mongoose.Schema.Types.ObjectId, ref: 'Todo', default: null },
     cardTitle: { type: String, default: null },
-    cardColor: { type: String, default: null }
+    cardColor: { type: String, default: null },
+    // whether the original activity was recurring
+    recurring: { type: Boolean, default: false },
+    // whether this completed snapshot can be recovered back into active todos
+    recoverable: { type: Boolean, default: true }
   }, { _id: false })], default: [] },
   // password reset token and expiry (optional)
   resetPasswordCode: { type: String, default: null },

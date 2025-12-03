@@ -214,6 +214,18 @@ async function scanOnce() {
         const due = new Date(t.dueDate).getTime();
         if (due > now - ONE_MIN) continue; // not expired long enough
 
+        // If this embedded todo references a top-level todo document, prefer
+        // the top-level document to avoid sending duplicate emails for the
+        // same logical activity (some users may have both embedded and
+        // top-level representations). If the referenced top-level todo
+        // exists, skip the embedded one — the top-level scanner handles it.
+        try {
+          if (t.parentId) {
+            const linked = await Todo.findById(t.parentId).lean();
+            if (linked) continue;
+          }
+        } catch (_) {}
+
         const count = t.overdueEmailCount || 0;
         const lastSent = t.lastOverdueEmailAt ? new Date(t.lastOverdueEmailAt) : null;
         if (count >= MAX_SENDS) continue;

@@ -15,20 +15,13 @@ router.get('/', auth.authMiddleware, async (req, res) => {
 
 // GET /api/todos/completed - return completed activity snapshots stored for user
 router.get('/completed', auth.authMiddleware, async (req, res) => {
-  const user = await User.findById(req.user.id).select('completedActivities');
+  const user = await User.findById(req.user.id).select('completedActivities todos');
   if (!user) return res.status(404).json({ error: 'User not found' });
-  // Filter out snapshots that correspond to recurring activities (they should not be recoverable)
+  // Return snapshots in reverse chronological order. Include snapshots for
+  // recurring activities as well (the frontend uses these for display; it can
+  // choose whether to allow recovery).
   const raw = (user.completedActivities || []).slice();
-  const filtered = raw.filter(snap => {
-    try {
-      if (!snap || !snap.originalId) return true
-      // if the original activity still exists and is recurring, exclude the snapshot
-      const orig = user.todos && Array.isArray(user.todos) ? user.todos.find(t => String(t._id) === String(snap.originalId)) : null
-      if (orig && orig.recurring) return false
-      return true
-    } catch (_) { return true }
-  })
-  const list = filtered.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+  const list = raw.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
   res.json(list);
 });
 
@@ -68,6 +61,7 @@ router.put('/:id', auth.authMiddleware, async (req, res) => {
   if (!todo) return res.status(404).json({ error: 'Todo not found' });
   // apply allowed updates
   const wasCompleted = !!todo.completed;
+  let createdSnapshot = null;
   Object.assign(todo, updates);
 
   // handle transition of completed flag: add snapshot on false->true, remove snapshots on true->false
@@ -78,30 +72,38 @@ router.put('/:id', auth.authMiddleware, async (req, res) => {
     user.completedActivities = user.completedActivities.filter(a => String(a.originalId) !== String(todo._id));
 
     if (!wasCompleted && nowCompleted) {
-      // Do not store snapshots for recurring activities; they should not be recoverable
-      if (!todo.recurring) {
-        const snapshot = {
-          originalId: todo._id,
-          title: todo.title || '',
-          description: todo.description || '',
-          completedAt: new Date(),
-          cardId: todo.parentId || null,
-          cardTitle: null,
-          cardColor: null
-        };
-        try {
-          // attempt to infer card title/color from other todos
-          const cardObj = user.todos.find(c => String(c._id) === String(snapshot.cardId));
-          if (cardObj) {
-            snapshot.cardTitle = cardObj.title || null;
-            snapshot.cardColor = cardObj.color || null;
-          }
-        } catch (_) {}
-        // push latest snapshot to the front
-        user.completedActivities.unshift(snapshot);
-        // keep a reasonable cap
-        if (user.completedActivities.length > 200) user.completedActivities = user.completedActivities.slice(0, 200);
-      }
+      // Store a snapshot of the completed activity so it appears in the
+      // "completed activities" list. We store snapshots for both recurring
+      // and non-recurring activities (the frontend will decide whether to
+      // allow recovery for recurring items).
+      const snapshot = {
+        originalId: todo._id,
+        title: todo.title || '',
+        description: todo.description || '',
+        completedAt: new Date(),
+        cardId: todo.parentId || null,
+        cardTitle: null,
+        cardColor: null,
+        recurring: !!todo.recurring,
+        // whether this completed snapshot can be recovered back into active todos
+        // recurring activities should not be recoverable because completing them
+        // generates the next occurrence immediately
+        recoverable: !todo.recurring
+      };
+      try {
+        // attempt to infer card title/color from other todos
+        const cardObj = user.todos.find(c => String(c._id) === String(snapshot.cardId));
+        if (cardObj) {
+          snapshot.cardTitle = cardObj.title || null;
+          snapshot.cardColor = cardObj.color || null;
+        }
+      } catch (_) {}
+      // push latest snapshot to the front
+      if (!Array.isArray(user.completedActivities)) user.completedActivities = [];
+      user.completedActivities.unshift(snapshot);
+      createdSnapshot = snapshot;
+      // keep a reasonable cap
+      if (user.completedActivities.length > 200) user.completedActivities = user.completedActivities.slice(0, 200);
     }
     // if was completed and now un-completed, we've already removed existing snapshots above
   } catch (e) {
@@ -166,7 +168,8 @@ router.put('/:id', auth.authMiddleware, async (req, res) => {
   }
 
   // respond with the updated todo and optional newly created occurrence
-  res.json({ updated: todo, newTodo });
+  // include the created snapshot (if any) so clients can update UI immediately
+  res.json({ updated: todo, newTodo, snapshot: createdSnapshot });
 });
 
 // DELETE /api/todos/:id

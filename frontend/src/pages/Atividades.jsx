@@ -99,9 +99,60 @@ export default function Atividades() {
                 setTodos(prev => Array.isArray(prev) ? prev.filter(x => String(x._id) !== String(id)) : prev)
                 try {
                   const body = await (res.json ? res.json() : Promise.resolve(null))
-                  // backend may return either the updated todo object or { updated, newTodo }
-                  const snapshotSource = body && body._id ? body : (body && body.updated ? body.updated : null)
-                  if (snapshotSource && snapshotSource._id) saveCompletedActivity(snapshotSource)
+                  // server may include explicit snapshot created for embedded todos
+                  if (body && body.snapshot) {
+                    const s = body.snapshot
+                    // map server snapshot to local format and persist; prefer the
+                    // explicit `recoverable` flag when present.
+                    const mapped = {
+                      id: s.originalId || s.id || null,
+                      title: s.title || '',
+                      description: s.description || '',
+                      completedAt: s.completedAt ? (new Date(s.completedAt)).toISOString() : new Date().toISOString(),
+                      cardId: s.cardId || null,
+                      cardTitle: s.cardTitle || null,
+                      cardColor: s.cardColor || null,
+                      recurring: !!s.recurring,
+                      recoverable: (typeof s.recoverable !== 'undefined') ? !!s.recoverable : !s.recurring
+                    }
+                    // persist locally for fallback and update UI
+                    try { saveCompletedActivity({ _id: mapped.id, parentId: mapped.cardId, title: mapped.title, description: mapped.description, recurring: mapped.recurring, recoverable: mapped.recoverable }) } catch (_) {}
+                    setCompletedActivities(prev => {
+                      try {
+                        const exists = Array.isArray(prev) ? prev.find(x => String(x.id) === String(mapped.id)) : null
+                        if (exists) return prev
+                        return [mapped].concat(Array.isArray(prev) ? prev : [])
+                      } catch (_) { return prev }
+                    })
+                  } else {
+                    // backend may return either the updated todo object or { updated, newTodo }
+                    const snapshotSource = body && body._id ? body : (body && body.updated ? body.updated : null)
+                    if (snapshotSource && snapshotSource._id) {
+                      // If the server did not provide an explicit `snapshot`, derive
+                      // a best-effort local snapshot from the updated todo.
+                      saveCompletedActivity(snapshotSource)
+                      try {
+                        const localSnap = {
+                          id: snapshotSource._id || snapshotSource.originalId || snapshotSource.id || null,
+                          title: snapshotSource.title || snapshotSource.name || '',
+                          description: snapshotSource.description || '',
+                          completedAt: (snapshotSource.completedAt ? new Date(snapshotSource.completedAt) : new Date()).toISOString(),
+                          cardId: snapshotSource.parentId || snapshotSource.cardId || null,
+                          cardTitle: snapshotSource.cardTitle || null,
+                          cardColor: snapshotSource.cardColor || null,
+                          recurring: !!snapshotSource.recurring,
+                          recoverable: (typeof snapshotSource.recoverable !== 'undefined') ? !!snapshotSource.recoverable : !snapshotSource.recurring
+                        }
+                        setCompletedActivities(prev => {
+                          try {
+                            const exists = Array.isArray(prev) ? prev.find(x => String(x.id) === String(localSnap.id)) : null
+                            if (exists) return prev
+                            return [localSnap].concat(Array.isArray(prev) ? prev : [])
+                          } catch (_) { return prev }
+                        })
+                      } catch (_) {}
+                    }
+                  }
                   // if server created a new recurring occurrence, insert it into state so UI updates immediately
                   if (body && body.newTodo && body.newTodo._id) {
                     setTodos(prev => {
@@ -148,14 +199,14 @@ export default function Atividades() {
   function saveCompletedActivity(activity) {
     try {
       if (!activity) return
-      // Do not persist completed snapshots for recurring activities
-      try { if (activity.recurring) return } catch (_) {}
+      // Persist completed snapshots (including recurring) so UI/localStorage stay in sync
+      try { /* allow recurring snapshots */ } catch (_) {}
       const key = 'completedActivitiesLog'
       const raw = localStorage.getItem(key)
       let arr = []
       try { arr = raw ? JSON.parse(raw) : [] } catch (_) { arr = [] }
       // capture a small snapshot of the card (title + color) so completed records remain meaningful
-      const cardId = activity.parentId || null
+      const cardId = activity.parentId || activity.cardId || null
       let cardTitle = null
       let cardColor = null
       try {
@@ -166,7 +217,7 @@ export default function Atividades() {
         }
       } catch (_) {}
 
-      arr.unshift({ id: activity._id, title: activity.title, description: activity.description || '', completedAt: new Date().toISOString(), cardId, cardTitle, cardColor })
+      arr.unshift({ id: activity._id, title: activity.title, description: activity.description || '', completedAt: new Date().toISOString(), cardId, cardTitle, cardColor, recurring: !!activity.recurring, recoverable: (typeof activity.recoverable !== 'undefined') ? !!activity.recoverable : !activity.recurring })
       // keep reasonable length
       if (arr.length > 200) arr = arr.slice(0, 200)
       localStorage.setItem(key, JSON.stringify(arr))
@@ -180,14 +231,16 @@ export default function Atividades() {
         const server = await fetchCompletedActivities()
         if (server && Array.isArray(server)) {
           const list = server.map(it => ({
-            id: it.originalId || it.id || it._id,
-            title: it.title || '',
-            description: it.description || '',
-            completedAt: it.completedAt ? (new Date(it.completedAt)).toISOString() : new Date().toISOString(),
-            cardId: it.cardId || null,
-            cardTitle: it.cardTitle || null,
-            cardColor: it.cardColor || null
-          }))
+              id: it.originalId || it.id || it._id,
+              title: it.title || '',
+              description: it.description || '',
+              completedAt: it.completedAt ? (new Date(it.completedAt)).toISOString() : new Date().toISOString(),
+              cardId: it.cardId || null,
+              cardTitle: it.cardTitle || null,
+              cardColor: it.cardColor || null,
+              recurring: !!it.recurring,
+              recoverable: (typeof it.recoverable !== 'undefined') ? !!it.recoverable : !it.recurring
+            }))
           const totalPages = Math.max(1, Math.ceil(list.length / completedPageSize))
           const clamped = Math.min(Math.max(1, page), totalPages)
           setCompletedActivities(list)
@@ -202,20 +255,27 @@ export default function Atividades() {
       const raw = localStorage.getItem(key)
       const arr = raw ? JSON.parse(raw) : []
       let list = Array.isArray(arr) ? arr : []
-      // Filter out local snapshots that belong to recurring todos (they should not be recoverable)
+          // Filter out local snapshots that belong to recurring todos (they should not be recoverable)
       try {
         const serverTodos = await fetchTodos()
         if (Array.isArray(serverTodos)) {
           const filtered = []
           for (const it of list) {
             try {
-              if (!it || !it.id) { filtered.push(it); continue }
-              const orig = serverTodos.find(t => String(t._id) === String(it.id))
-              if (orig && orig.recurring) {
-                // skip recurring originals
-                continue
-              }
-              filtered.push(it)
+                  if (!it || !it.id) { filtered.push(it); continue }
+                  // if the stored snapshot includes an explicit recoverable flag,
+                  // prefer it. If recoverable === false, skip the item.
+                  if (typeof it.recoverable !== 'undefined') {
+                    if (it.recoverable === false) continue
+                    filtered.push(it)
+                    continue
+                  }
+                  const orig = serverTodos.find(t => String(t._id) === String(it.id))
+                  if (orig && orig.recurring) {
+                    // skip recurring originals
+                    continue
+                  }
+                  filtered.push(it)
             } catch (_) { filtered.push(it) }
           }
           if (filtered.length !== list.length) {
@@ -925,12 +985,28 @@ export default function Atividades() {
                       <ul style={{ padding: 0, listStyle: 'none', margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
                           {pageItems.map((a, idx) => {
                           const cardObj = a.cardId ? cards.find(c => String(c._id) === String(a.cardId)) : null
-                          // determine if the original todo (if present) is recurring — if so, do not allow recovery
-                          let origIsRecurring = false
+                          // Determine whether this completed snapshot can be recovered.
+                          // Prefer the explicit `recoverable` flag when present. Fallback
+                          // to checking the original todo or the `recurring` marker.
+                          // Default: disallow recovery unless explicitly allowed.
+                          // Priority:
+                          // 1) If `a.recoverable` is present, use it.
+                          // 2) Else, if `a.recurring === true` then not recoverable.
+                          // 3) Else, if the original todo exists and is recurring, not recoverable.
+                          // 4) Otherwise allow recovery.
+                          let canRecover = true
                           try {
-                            const orig = todos && Array.isArray(todos) ? todos.find(t => String(t._id) === String(a.id)) : null
-                            if (orig && orig.recurring) origIsRecurring = true
-                          } catch (_) {}
+                            if (typeof a.recoverable !== 'undefined') {
+                              canRecover = !!a.recoverable
+                            } else if (a && a.recurring) {
+                              canRecover = false
+                            } else {
+                              try {
+                                const orig = todos && Array.isArray(todos) ? todos.find(t => String(t._id) === String(a.id)) : null
+                                if (orig && orig.recurring) canRecover = false
+                              } catch (_) {}
+                            }
+                          } catch (_) { canRecover = true }
                           // Prefer snapshot from the completed record (cardTitle/cardColor) when present
                           // Prefer the live card data when available so edits to the card
                           // (like color/title) immediately reflect in the completed list.
@@ -952,14 +1028,14 @@ export default function Atividades() {
                               </div>
                               <div className="completed-right" style={{ whiteSpace: 'nowrap', textAlign: 'right', minWidth: 160 }}>
                                 <div className="completed-date completed-date-right" style={{ fontSize: 13, fontWeight: 700 }}>{formatCompletedAt(a.completedAt)}</div>
-                                {cardObj && !origIsRecurring && (
+                                {cardObj && canRecover && (
                                   <div style={{ marginTop: 8 }}>
                                     <button className="btn" type="button" onClick={() => recoverCompletedActivity(a)} disabled={recoveringIds.has(a.id)} style={{ padding: '6px 10px', fontSize: 13 }}>
                                       {recoveringIds.has(a.id) ? 'Recuperando...' : 'Recuperar'}
                                     </button>
                                   </div>
                                 )}
-                                {origIsRecurring && (
+                                {!canRecover && (
                                   <div style={{ marginTop: 8 }}>
                                     <button className="btn" type="button" disabled style={{ padding: '6px 10px', fontSize: 13, opacity: 0.6, cursor: 'default' }}>
                                       Não recuperável
@@ -1054,8 +1130,15 @@ export default function Atividades() {
                                   )}
                                 </div>
                               </div>
-                              <div className="activity-bottom muted" style={{ fontSize: 13 }}>{r.dueDate ? new Date(r.dueDate).toLocaleString() : ''}</div>
-                              <div className="muted" style={{ fontSize: 13 }}>{r.description || ''}</div>
+                              {(() => {
+                                const hideMeta = !r.recurring && !r.dueDate
+                                return (
+                                  <>
+                                    <div className="activity-bottom muted" style={{ fontSize: 13, display: hideMeta ? 'none' : undefined }}>{r.dueDate ? new Date(r.dueDate).toLocaleString() : ''}</div>
+                                    <div className="muted" style={{ fontSize: 13, display: hideMeta ? 'none' : undefined }}>{r.description || ''}</div>
+                                  </>
+                                )
+                              })()}
                             </div>
 
                             <div className={"activity-actions" + (entering ? ' animate-in' : '')} style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
