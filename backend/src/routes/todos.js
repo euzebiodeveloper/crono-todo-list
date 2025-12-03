@@ -3,6 +3,29 @@ const router = express.Router();
 const User = require('../models/user');
 const auth = require('./auth');
 
+// Helper: parse a client `datetime-local` style string (YYYY-MM-DDTHH:mm or with :ss)
+// as local time (so it won't be interpreted as UTC). If input is already a
+// Date or contains timezone info, fall back to `new Date()`.
+function parseLocalDate(input) {
+  if (!input) return null;
+  if (input instanceof Date) return input;
+  // match YYYY-MM-DDTHH:mm or YYYY-MM-DDTHH:mm:ss
+  const m = String(input).match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/);
+  if (m) {
+    const year = parseInt(m[1], 10);
+    const month = parseInt(m[2], 10) - 1;
+    const day = parseInt(m[3], 10);
+    const hour = parseInt(m[4], 10);
+    const minute = parseInt(m[5], 10);
+    const second = m[6] ? parseInt(m[6], 10) : 0;
+    // construct with local timezone
+    return new Date(year, month, day, hour, minute, second, 0);
+  }
+  // fallback: let Date parse strings that include timezone or other formats
+  const d = new Date(input);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 // GET /api/todos
 // GET /api/todos - returns embedded todos for the authenticated user
 router.get('/', auth.authMiddleware, async (req, res) => {
@@ -40,7 +63,7 @@ router.post('/', auth.authMiddleware, async (req, res) => {
     name: name || '',
     recurring: !!recurring,
     weekdays: Array.isArray(weekdays) ? weekdays : [],
-    dueDate: dueDate ? new Date(dueDate) : undefined,
+    dueDate: dueDate ? parseLocalDate(dueDate) : undefined,
     color: color || '#000000'
   };
   user.todos.push(todo);
@@ -62,6 +85,16 @@ router.put('/:id', auth.authMiddleware, async (req, res) => {
   // apply allowed updates
   const wasCompleted = !!todo.completed;
   let createdSnapshot = null;
+  // If client sent a dueDate from a datetime-local input (no timezone),
+  // parse it as local time to avoid unintended UTC shifts.
+  try {
+    if (updates && updates.dueDate) {
+      const parsed = parseLocalDate(updates.dueDate);
+      if (parsed) updates.dueDate = parsed;
+      else delete updates.dueDate;
+    }
+  } catch (_) {}
+
   Object.assign(todo, updates);
 
   // handle transition of completed flag: add snapshot on false->true, remove snapshots on true->false
