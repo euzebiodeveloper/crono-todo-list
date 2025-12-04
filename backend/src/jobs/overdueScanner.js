@@ -55,11 +55,12 @@ async function processTodoItem(todo) {
       cardTitle = todo.name;
     }
 
-    const subject = `Atividade expirada: ${todo.title || todo.name || 'Atividade'}`;
+    const subject = todo.reminder ? `Lembrete: ${todo.title || todo.name || 'Atividade'}` : `Atividade expirada: ${todo.title || todo.name || 'Atividade'}`;
     const dueDateStr = todo.dueDate ? new Date(todo.dueDate).toLocaleString() : 'Sem data';
     const quote = pickQuote();
     const recurringNote = todo.recurring ? '<p><strong>Esta é uma atividade recorrente.</strong></p>' : '';
-    const html = `<p>Sua atividade está expirada.</p>
+    const intro = todo.reminder ? '<p>Este é um lembrete sobre sua atividade.</p>' : '<p>Sua atividade está expirada.</p>';
+    const html = `${intro}
       <p><strong>Cartão:</strong> ${cardTitle || '—'}</p>
       <p><strong>Atividade:</strong> ${todo.title || todo.name || '—'}</p>
       <p><strong>Data:</strong> ${dueDateStr}</p>
@@ -162,11 +163,12 @@ async function processEmbeddedTodo(user, todo, userDoc) {
       cardTitle = todo.name;
     }
 
-    const subject = `Atividade expirada: ${todo.title || todo.name || 'Atividade'}`;
+    const subject = todo.reminder ? `Lembrete: ${todo.title || todo.name || 'Atividade'}` : `Atividade expirada: ${todo.title || todo.name || 'Atividade'}`;
     const dueDateStr = todo.dueDate ? new Date(todo.dueDate).toLocaleString() : 'Sem data';
     const quote = pickQuote();
     const recurringNote = todo.recurring ? '<p><strong>Esta é uma atividade recorrente.</strong></p>' : '';
-    const html = `<p>Sua atividade está expirada.</p>
+    const intro = todo.reminder ? '<p>Este é um lembrete sobre sua atividade.</p>' : '<p>Sua atividade está expirada.</p>';
+    const html = `${intro}
       <p><strong>Cartão:</strong> ${cardTitle || '—'}</p>
       <p><strong>Atividade:</strong> ${todo.title || todo.name || '—'}</p>
       <p><strong>Data:</strong> ${dueDateStr}</p>
