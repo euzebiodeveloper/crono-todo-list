@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/user');
 const auth = require('./auth');
+const { DateTime } = require('luxon');
 
 // Helper: parse a client `datetime-local` style string (YYYY-MM-DDTHH:mm or with :ss)
 // as local time (so it won't be interpreted as UTC). If input is already a
@@ -9,19 +10,24 @@ const auth = require('./auth');
 function parseLocalDate(input) {
   if (!input) return null;
   if (input instanceof Date) return input;
-  // match YYYY-MM-DDTHH:mm or YYYY-MM-DDTHH:mm:ss
+  // match YYYY-MM-DDTHH:mm or YYYY-MM-DDTHH:mm:ss (datetime-local inputs)
   const m = String(input).match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/);
   if (m) {
     const year = parseInt(m[1], 10);
-    const month = parseInt(m[2], 10) - 1;
+    const month = parseInt(m[2], 10);
     const day = parseInt(m[3], 10);
     const hour = parseInt(m[4], 10);
     const minute = parseInt(m[5], 10);
     const second = m[6] ? parseInt(m[6], 10) : 0;
-    // construct with local timezone
-    return new Date(year, month, day, hour, minute, second, 0);
+    // Interpret the client-provided local datetime as America/Sao_Paulo
+    const dt = DateTime.fromObject({ year, month, day, hour, minute, second }, { zone: 'America/Sao_Paulo' });
+    return dt.isValid ? dt.toJSDate() : null;
   }
-  // fallback: let Date parse strings that include timezone or other formats
+  // Try ISO parsing with Luxon; it will respect timezone info if present
+  const iso = String(input);
+  let dt = DateTime.fromISO(iso);
+  if (dt.isValid) return dt.toJSDate();
+  // Fallback to JS Date parsing as last resort
   const d = new Date(input);
   return isNaN(d.getTime()) ? null : d;
 }
@@ -158,16 +164,18 @@ router.put('/:id', auth.authMiddleware, async (req, res) => {
         if (!Array.isArray(weekdaysArr) || weekdaysArr.length === 0) return null;
         const nums = weekdaysArr.map(weekdayStringToNumber).filter(n => n !== null);
         if (nums.length === 0) return null;
-        const base = new Date(baseDate);
-        const hour = base.getHours();
-        const minute = base.getMinutes();
-        const second = base.getSeconds();
+        // Use Luxon in America/Sao_Paulo to compute next occurrence consistently
+        const baseDT = DateTime.fromJSDate(baseDate instanceof Date ? baseDate : new Date(), { zone: 'America/Sao_Paulo' });
+        const hour = baseDT.hour;
+        const minute = baseDT.minute;
+        const second = baseDT.second;
         for (let i = 1; i <= 14; i++) {
-          const cand = new Date(base);
-          cand.setDate(base.getDate() + i);
-          if (nums.includes(cand.getDay())) {
-            cand.setHours(hour, minute, second, 0);
-            return cand;
+          const cand = baseDT.plus({ days: i });
+          // Luxon weekday: 1 (Mon) ... 7 (Sun). Our map uses 0 (Sun) ... 6 (Sat).
+          const candWeekNum = cand.weekday % 7; // converts 7->0 for Sunday
+          if (nums.includes(candWeekNum)) {
+            const final = cand.set({ hour, minute, second, millisecond: 0 });
+            return final.toJSDate();
           }
         }
         return null;
