@@ -1145,6 +1145,7 @@ export default function Atividades() {
                           if (r.status === 204 || r.ok) {
                             const fresh = await fetchTodos()
                             setTodos(Array.isArray(fresh) ? fresh : [])
+                            try { toast.success('Atividade excluída') } catch (_) {}
                           } else {
                             // clear removing indicator after a short delay
                             setTimeout(() => setRemovingId(null), 600)
@@ -1402,6 +1403,7 @@ export default function Atividades() {
                                       if (res && (res.status === 204 || res.ok)) {
                                         const fresh = await fetchTodos()
                                         setTodos(Array.isArray(fresh) ? fresh : [])
+                                        try { toast.success('Atividade excluída') } catch (_) {}
                                       }
                                     } catch (err) {
                                       console.error(err)
