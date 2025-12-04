@@ -3,6 +3,7 @@ const router = express.Router();
 const User = require('../models/user');
 const auth = require('./auth');
 const { DateTime } = require('luxon');
+const { sendEmail } = require('../utils/email');
 
 // Helper: parse a client `datetime-local` style string (YYYY-MM-DDTHH:mm or with :ss)
 // as local time (so it won't be interpreted as UTC). If input is already a
@@ -58,16 +59,24 @@ router.get('/completed', auth.authMiddleware, async (req, res) => {
 // POST /api/todos - create todo for authenticated user
 // POST /api/todos - create embedded todo inside authenticated user's document
 router.post('/', auth.authMiddleware, async (req, res) => {
-  const { title, description, name, recurring, weekdays, dueDate, color, parentId } = req.body;
+  const { title, description, name, recurring, weekdays, dueDate, color, parentId, reminder, reminderDate } = req.body;
   if (!title) return res.status(400).json({ error: 'Title is required' });
   const user = await User.findById(req.user.id);
   if (!user) return res.status(404).json({ error: 'User not found' });
+  // reminders are mutually exclusive with recurring activities
+  if (reminder && recurring) return res.status(400).json({ error: 'A todo cannot be both recurring and a reminder' });
+
+  const parsedReminderDate = reminder ? (reminderDate ? parseLocalDate(reminderDate) : null) : null;
+  if (reminder && !parsedReminderDate) return res.status(400).json({ error: 'Reminder requires a valid date/time' });
+
   const todo = {
     title,
     description: description || '',
     parentId: parentId || null,
     name: name || '',
     recurring: !!recurring,
+    reminder: !!reminder,
+    reminderDate: parsedReminderDate || undefined,
     weekdays: Array.isArray(weekdays) ? weekdays : [],
     dueDate: dueDate ? parseLocalDate(dueDate) : undefined,
     color: color || '#000000'
@@ -75,7 +84,12 @@ router.post('/', auth.authMiddleware, async (req, res) => {
   user.todos.push(todo);
   await user.save();
   // return the newly created subdoc (it's the last one)
-  res.status(201).json(user.todos[user.todos.length - 1]);
+  const created = user.todos[user.todos.length - 1];
+
+  // Created normally; reminders are handled by the scheduled scanner (`overdueScanner`)
+  // so we should not send the email or remove the todo here. The scanner will
+  // send the email at the proper time and move the item to completed snapshots.
+  res.status(201).json(created);
 });
 
 // PUT /api/todos/:id
@@ -98,6 +112,16 @@ router.put('/:id', auth.authMiddleware, async (req, res) => {
       const parsed = parseLocalDate(updates.dueDate);
       if (parsed) updates.dueDate = parsed;
       else delete updates.dueDate;
+    }
+    // parse reminderDate if provided
+    if (updates && typeof updates.reminderDate !== 'undefined' && updates.reminderDate) {
+      const parsedRem = parseLocalDate(updates.reminderDate);
+      if (parsedRem) updates.reminderDate = parsedRem;
+      else delete updates.reminderDate;
+    }
+    // Prevent marking reminders as completed
+    if (updates && updates.completed && todo.reminder) {
+      return res.status(400).json({ error: 'Reminders cannot be marked as completed' });
     }
   } catch (_) {}
 

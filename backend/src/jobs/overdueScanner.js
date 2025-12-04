@@ -73,6 +73,47 @@ async function processTodoItem(todo) {
 
     await sendEmail(user.email, subject, html);
 
+    // If this todo is a reminder, after sending the reminder email we should
+    // remove the todo and add a completed snapshot to the user's completedActivities
+    if (todo.reminder) {
+      try {
+        const userDoc = await User.findById(todo.user);
+        if (userDoc) {
+          // build snapshot
+          const snapshot = {
+            originalId: todo._id,
+            title: todo.title || todo.name || '',
+            description: todo.description || '',
+            completedAt: new Date(),
+            cardId: todo.parentId || null,
+            cardTitle: null,
+            cardColor: null,
+            recurring: !!todo.recurring,
+            recoverable: false
+          };
+          try {
+            const cardObj = await Todo.findById(snapshot.cardId).lean();
+            if (cardObj) {
+              snapshot.cardTitle = cardObj.title || null;
+              snapshot.cardColor = cardObj.color || null;
+            }
+          } catch (_) {}
+
+          userDoc.completedActivities = userDoc.completedActivities || [];
+          userDoc.completedActivities.unshift(snapshot);
+          if (userDoc.completedActivities.length > 200) userDoc.completedActivities = userDoc.completedActivities.slice(0, 200);
+
+          // remove the top-level todo
+          await Todo.findByIdAndDelete(todo._id);
+
+          await userDoc.save();
+          return;
+        }
+      } catch (err) {
+        console.error('Failed to record reminder snapshot for top-level todo', err);
+      }
+    }
+
     // update todo counters and handle recurring behavior
     const prevCount = todo.overdueEmailCount || 0;
     const newCount = prevCount + 1;
@@ -102,7 +143,7 @@ async function processTodoItem(todo) {
     // non-recurring: increment counters and set last sent
     await Todo.findByIdAndUpdate(todo._id, {
       $inc: { overdueEmailCount: 1 },
-      $set: { lastOverdueEmailAt: new Date() }
+      $set: { lastOverdueEmailAt: new Date(), reminderSentAt: todo.reminder ? new Date() : (todo.reminderSentAt || null) }
     });
   } catch (err) {
     console.error('Failed to process todo item', err);
@@ -167,12 +208,51 @@ async function processEmbeddedTodo(user, todo, userDoc) {
       return;
     }
 
-    // non-recurring embedded todo: increment counters and set last sent
+    // non-recurring embedded todo: if it's a reminder, record snapshot and remove it;
+    // otherwise increment counters and set last sent
+    if (todo.reminder) {
+      try {
+        // mark when reminder was sent
+        todo.reminderSentAt = new Date();
+
+        const snapshot = {
+          originalId: todo._id,
+          title: todo.title || todo.name || '',
+          description: todo.description || '',
+          completedAt: new Date(),
+          cardId: todo.parentId || null,
+          cardTitle: null,
+          cardColor: null,
+          recurring: !!todo.recurring,
+          recoverable: false
+        };
+        try {
+          const parent = await Todo.findById(snapshot.cardId).lean();
+          if (parent) {
+            snapshot.cardTitle = parent.title || null;
+            snapshot.cardColor = parent.color || null;
+          }
+        } catch (_) {}
+
+        userDoc.completedActivities = userDoc.completedActivities || [];
+        userDoc.completedActivities.unshift(snapshot);
+        if (userDoc.completedActivities.length > 200) userDoc.completedActivities = userDoc.completedActivities.slice(0, 200);
+
+        // remove embedded todo
+        userDoc.todos = (userDoc.todos || []).filter(x => String(x._id) !== String(todo._id));
+        await userDoc.save();
+        return;
+      } catch (err) {
+        console.error('Failed to record reminder snapshot for embedded todo', err);
+      }
+    }
+
     if (!todo.overdueEmailCount) todo.overdueEmailCount = 0;
     todo.overdueEmailCount += 1;
     todo.lastOverdueEmailAt = new Date();
 
     await userDoc.save();
+    return;
   } catch (err) {
     console.error('Failed to process embedded todo', err);
   }

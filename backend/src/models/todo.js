@@ -9,6 +9,12 @@ const TodoSchema = new mongoose.Schema({
   name: { type: String },
   completed: { type: Boolean, default: false },
   recurring: { type: Boolean, default: false },
+  // whether this todo is a one-off reminder
+  reminder: { type: Boolean, default: false },
+  // when the reminder should happen
+  reminderDate: { type: Date },
+  // when the reminder email was sent (used to avoid duplicate sends)
+  reminderSentAt: { type: Date, default: null },
   weekdays: { type: [String], default: [] }, // e.g. ['mon','wed']
   dueDate: { type: Date },
   // tracking for overdue notification emails

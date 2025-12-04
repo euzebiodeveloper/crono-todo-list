@@ -40,6 +40,7 @@ export default function Atividades() {
   const [recurring, setRecurring] = useState(false)
   const [weekdays, setWeekdays] = useState([])
   const [dueDate, setDueDate] = useState('')
+  const [reminder, setReminder] = useState(false)
   
   const [editingCard, setEditingCard] = useState(null)
   const [editingTitle, setEditingTitle] = useState('')
@@ -440,7 +441,7 @@ export default function Atividades() {
     const hasName = t.name && String(t.name).trim().length > 0
     const hasRecurring = !!t.recurring
     const hasWeekdays = Array.isArray(t.weekdays) && t.weekdays.length > 0
-    const hasDue = !!t.dueDate
+    const hasDue = !!t.dueDate || !!t.reminderDate || !!t.reminder
     return !hasName && !hasRecurring && !hasWeekdays && !hasDue
   })
 
@@ -455,7 +456,7 @@ export default function Atividades() {
     const hasName = t.name && String(t.name).trim().length > 0
     const hasRecurring = !!t.recurring
     const hasWeekdays = Array.isArray(t.weekdays) && t.weekdays.length > 0
-    const hasDue = !!t.dueDate
+    const hasDue = !!t.dueDate || !!t.reminderDate || !!t.reminder
     return hasName || hasRecurring || hasWeekdays || hasDue
   })
 
@@ -467,7 +468,7 @@ export default function Atividades() {
       const hasName = x.name && String(x.name).trim().length > 0
       const hasRecurring = !!x.recurring
       const hasWeekdays = Array.isArray(x.weekdays) && x.weekdays.length > 0
-      const hasDue = !!x.dueDate
+      const hasDue = !!x.dueDate || !!x.reminderDate || !!x.reminder
       const isActivity = hasName || hasRecurring || hasWeekdays || hasDue
       if (!isActivity) return false
 
@@ -482,7 +483,7 @@ export default function Atividades() {
 
   function earliestDueDateForCard(card) {
     const related = getRelatedActivitiesForCard(card)
-    const dates = related.map(r => { try { return r.dueDate ? new Date(r.dueDate) : null } catch (_) { return null } }).filter(d => d instanceof Date && !isNaN(d))
+    const dates = related.map(r => { try { return r.dueDate ? new Date(r.dueDate) : (r.reminderDate ? new Date(r.reminderDate) : null) } catch (_) { return null } }).filter(d => d instanceof Date && !isNaN(d))
     if (!dates || dates.length === 0) return null
     return dates.reduce((min, d) => !min || d < min ? d : min, null)
   }
@@ -742,13 +743,18 @@ export default function Atividades() {
       toast.error('Para atividades recorrentes, selecione ao menos um dia da semana')
       return
     }
+    // If activity is a reminder, a date/time is required
+    if (reminder && (!dueDate || String(dueDate).trim() === '')) {
+      toast.error('Para lembretes, selecione uma data/hora')
+      return
+    }
     // If there are cards, a card selection is required
     if (cards && cards.length > 0 && (!selectedCardId || String(selectedCardId).trim() === '')) {
       toast.error('Selecione um cartão para a atividade')
       return
     }
     try {
-      const payload = { title, name, recurring, weekdays, dueDate: dueDate ? dueDate : null }
+      const payload = { title, name, recurring, weekdays, dueDate: dueDate ? dueDate : null, reminder, reminderDate: reminder ? (dueDate ? dueDate : null) : null }
       // if a card is selected, attach its id as parentId and also set name to card title for legacy matching
       if (selectedCardId) {
         payload.parentId = selectedCardId
@@ -761,6 +767,7 @@ export default function Atividades() {
         setTitle('')
         setName('')
         setRecurring(false)
+        setReminder(false)
         setWeekdays([])
         setDueDate('')
         setShowForm(false)
@@ -883,8 +890,12 @@ export default function Atividades() {
               )}
               <div className="activity-controls">
                 <label className="checkbox-left">
-                  <input type="checkbox" checked={recurring} onChange={e => setRecurring(e.target.checked)} />
+                  <input type="checkbox" checked={recurring} onChange={e => { const val = e.target.checked; setRecurring(val); if (val) setReminder(false); }} />
                   <span>Recorrente</span>
+                </label>
+                <label className="checkbox-left">
+                  <input type="checkbox" checked={reminder} onChange={e => { const val = e.target.checked; setReminder(val); if (val) setRecurring(false); }} />
+                  <span>Lembrete</span>
                 </label>
                 {recurring && (
                   <div className="weekday-group">
@@ -894,6 +905,10 @@ export default function Atividades() {
                       </label>
                     ))}
                   </div>
+                )}
+                {/* hide weekdays and related controls when a reminder is selected */}
+                {reminder && (
+                  <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 6, width: '100%' }}>Lembrete: será enviado um e-mail na data selecionada</div>
                 )}
               </div>
               <label className="due-label">Data e hora de entrega</label>
@@ -1108,13 +1123,13 @@ export default function Atividades() {
                       return (
                         <li key={r._id} className={"activity-item" + (isExiting ? ' exit' : '') + (isCompleting ? ' completed-exit' : '') + (isDeleting ? ' deleting-exit' : '') + (enterRight ? ' enter-right' : (entering ? ' animate-in' : ''))} style={{ padding: 10, borderRadius: 8, background: 'rgba(0,0,0,0.03)' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
-                            <div className="activity-col-checkbox" style={{ flex: '0 0 36px', display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                              <div className="activity-col-checkbox" style={{ flex: '0 0 36px', display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
                               <input
                                 type="checkbox"
-                                aria-label={`Marcar ${r.title} como concluída`}
+                                aria-label={r.reminder ? `Lembrete: não é possível marcar como concluída` : `Marcar ${r.title} como concluída`}
                                 checked={!!r.completed || optimisticCompletedIds.has(r._id)}
-                                disabled={isExiting || isPending}
-                                onChange={e => { updateActivityCompletion(r._id, e.target.checked); }}
+                                disabled={isExiting || isPending || !!r.reminder}
+                                onChange={e => { if (!r.reminder) updateActivityCompletion(r._id, e.target.checked); }}
                               />
                             </div>
 
@@ -1128,13 +1143,20 @@ export default function Atividades() {
                                       <path d="M21 3v6h-6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
                                     </svg>
                                   )}
+                                  {r.reminder && (
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Lembrete" title="Lembrete" style={{ flex: '0 0 auto', color: 'rgba(0,0,0,0.55)' }}>
+                                      <path d="M12 7v5l3 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                                      <path d="M21 12a9 9 0 1 0-18 0 9 9 0 0 0 18 0z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                                    </svg>
+                                  )}
                                 </div>
                               </div>
                               {(() => {
-                                const hideMeta = !r.recurring && !r.dueDate
+                                const hideMeta = !r.recurring && !r.dueDate && !r.reminder && !r.reminderDate
+                                const displayDate = r.dueDate ? new Date(r.dueDate) : (r.reminderDate ? new Date(r.reminderDate) : null)
                                 return (
                                   <>
-                                    <div className="activity-bottom muted" style={{ fontSize: 13, display: hideMeta ? 'none' : undefined }}>{r.dueDate ? new Date(r.dueDate).toLocaleString() : ''}</div>
+                                    <div className="activity-bottom muted" style={{ fontSize: 13, display: hideMeta ? 'none' : undefined }}>{displayDate ? displayDate.toLocaleString() : ''}</div>
                                     <div className="muted" style={{ fontSize: 13, display: hideMeta ? 'none' : undefined }}>{r.description || ''}</div>
                                   </>
                                 )
