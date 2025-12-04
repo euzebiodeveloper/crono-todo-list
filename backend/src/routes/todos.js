@@ -59,7 +59,7 @@ router.get('/completed', auth.authMiddleware, async (req, res) => {
 // POST /api/todos - create todo for authenticated user
 // POST /api/todos - create embedded todo inside authenticated user's document
 router.post('/', auth.authMiddleware, async (req, res) => {
-  const { title, description, name, recurring, weekdays, dueDate, color, parentId, reminder, reminderDate } = req.body;
+  const { title, description, name, recurring, weekdays, dueDate, color, parentId, reminder, reminderDate, meta, metaTime, metaUnit, metaReps, metaCompletedCount } = req.body;
   if (!title) return res.status(400).json({ error: 'Title is required' });
   const user = await User.findById(req.user.id);
   if (!user) return res.status(404).json({ error: 'User not found' });
@@ -79,7 +79,13 @@ router.post('/', auth.authMiddleware, async (req, res) => {
     reminderDate: parsedReminderDate || undefined,
     weekdays: Array.isArray(weekdays) ? weekdays : [],
     dueDate: dueDate ? parseLocalDate(dueDate) : undefined,
-    color: color || '#000000'
+    color: color || '#000000',
+    // meta fields (if provided)
+    meta: !!meta,
+    metaTime: typeof metaTime !== 'undefined' ? Number(metaTime) : 1,
+    metaUnit: metaUnit || 'min',
+    metaReps: typeof metaReps !== 'undefined' ? Number(metaReps) : 1,
+    metaCompletedCount: typeof metaCompletedCount !== 'undefined' ? Number(metaCompletedCount) : 0
   };
   user.todos.push(todo);
   await user.save();
@@ -144,10 +150,16 @@ router.put('/:id', auth.authMiddleware, async (req, res) => {
         title: todo.title || '',
         description: todo.description || '',
         completedAt: new Date(),
+        // include original creation time so frontend can use it when recovering
+        createdAt: todo.createdAt || null,
         cardId: todo.parentId || null,
         cardTitle: null,
         cardColor: null,
         recurring: !!todo.recurring,
+        // include meta info so frontend can reset meta counters on recovery
+        meta: !!todo.meta,
+        metaReps: todo.metaReps || todo.meta_reps || 1,
+        metaCompletedCount: todo.metaCompletedCount || todo.metaCompleted || 0,
         // whether this completed snapshot can be recovered back into active todos
         // recurring activities should not be recoverable because completing them
         // generates the next occurrence immediately

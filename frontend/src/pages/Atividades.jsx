@@ -41,6 +41,10 @@ export default function Atividades() {
   const [weekdays, setWeekdays] = useState([])
   const [dueDate, setDueDate] = useState('')
   const [reminder, setReminder] = useState(false)
+  const [meta, setMeta] = useState(false)
+  const [metaTime, setMetaTime] = useState(1)
+  const [metaUnit, setMetaUnit] = useState('min')
+  const [metaReps, setMetaReps] = useState(1)
   
   const [editingCard, setEditingCard] = useState(null)
   const [editingTitle, setEditingTitle] = useState('')
@@ -54,6 +58,7 @@ export default function Atividades() {
   const [pendingIds, setPendingIds] = useState(new Set())
   const [optimisticCompletedIds, setOptimisticCompletedIds] = useState(new Set())
   const [deletingIds, setDeletingIds] = useState(new Set())
+  const [metaProcessingIds, setMetaProcessingIds] = useState(new Set())
   const [enteringFromRightIds, setEnteringFromRightIds] = useState(new Set())
   const [completedExitingIds, setCompletedExitingIds] = useState(new Set())
   const [showCompletedModal, setShowCompletedModal] = useState(false)
@@ -61,6 +66,67 @@ export default function Atividades() {
   const [recoveringIds, setRecoveringIds] = useState(new Set())
   const [completedPage, setCompletedPage] = useState(1)
   const [completedPageSize] = useState(8)
+
+  // helper: compute next due date given a base date, time value and unit
+  function computeNextDueDate(base, timeVal, unit) {
+    try {
+      const t = Number(timeVal) || 1
+      const date = new Date(base || new Date())
+      if (unit === 'hour') date.setHours(date.getHours() + t)
+      else if (unit === 'day') date.setDate(date.getDate() + t)
+      else date.setMinutes(date.getMinutes() + t) // default to minutes
+      return date.toISOString()
+    } catch (_) {
+      return (new Date()).toISOString()
+    }
+  }
+
+  // handle a single tick for a meta (goal) activity. If this was the final
+  // repetition, mark the activity completed; otherwise increment the
+  // `metaCompletedCount` and schedule the next due date.
+  async function handleMetaTick(r, checked) {
+    if (!r || !r._id) return
+    const id = r._id
+    if (!checked) return
+    setMetaProcessingIds(prev => { const copy = new Set(prev); copy.add(String(id)); return copy })
+    try {
+      const completedCount = Number(r.metaCompletedCount || r.metaCompleted || 0)
+      const reps = Number(r.metaReps || r.metaRepetitions || r.meta_reps || 1)
+      const nextCount = completedCount + 1
+      const progress = Math.min(100, Math.round((nextCount / reps) * 100))
+      const timeVal = Number(r.metaTime || r.meta_time || 1)
+      const unit = r.metaUnit || r.meta_unit || 'min'
+      const currentDue = r.dueDate ? new Date(r.dueDate) : new Date()
+      const nextDue = computeNextDueDate(currentDue, timeVal, unit)
+
+      if (nextCount >= reps) {
+        // final repetition -> mark completed using existing flow
+        await updateActivityCompletion(id, true)
+        try { toast.success('Meta concluída') } catch (_) {}
+      } else {
+        // persist updated count and schedule next occurrence
+        const payload = { metaCompletedCount: nextCount, dueDate: nextDue, overdueEmailCount: 0, lastOverdueEmailAt: null, reminderSentAt: null }
+        try {
+          const res = await updateTodo(id, payload)
+          if (res && (res.status === 200 || res.ok)) {
+            try { toast.info(`Progresso: ${progress}%`) } catch (_) {}
+            const t = await fetchTodos()
+            setTodos(Array.isArray(t) ? t : [])
+          } else {
+            try { toast.error('Falha ao atualizar meta') } catch (_) {}
+          }
+        } catch (e) {
+          console.error(e)
+          try { toast.error('Erro ao atualizar meta') } catch (_) {}
+        }
+      }
+    } catch (e) {
+      console.error(e)
+      try { toast.error('Erro ao processar meta') } catch (_) {}
+    } finally {
+      setMetaProcessingIds(prev => { const copy = new Set(prev); copy.delete(String(id)); return copy })
+    }
+  }
 
   // update activity completion state
   async function updateActivityCompletion(id, completed) {
@@ -154,6 +220,64 @@ export default function Atividades() {
                       } catch (_) {}
                     }
                   }
+
+                  // helper to compute next due date given a base date, time value and unit
+                  function computeNextDueDate(base, timeVal, unit) {
+                    try {
+                      const t = Number(timeVal) || 1
+                      const date = new Date(base || new Date())
+                      if (unit === 'hour') date.setHours(date.getHours() + t)
+                      else if (unit === 'day') date.setDate(date.getDate() + t)
+                      else date.setMinutes(date.getMinutes() + t) // default to minutes
+                      return date.toISOString()
+                    } catch (_) {
+                      return (new Date()).toISOString()
+                    }
+                  }
+
+                  async function handleMetaTick(r, checked) {
+                    if (!r || !r._id) return
+                    const id = r._id
+                    if (!checked) return
+                    setMetaProcessingIds(prev => { const copy = new Set(prev); copy.add(id); return copy })
+                    try {
+                      const completedCount = Number(r.metaCompletedCount || r.metaCompleted || 0)
+                      const reps = Number(r.metaReps || r.metaRepetitions || r.meta_reps || 1)
+                      const nextCount = completedCount + 1
+                      const progress = Math.min(100, Math.round((nextCount / reps) * 100))
+                      const timeVal = Number(r.metaTime || r.meta_time || 1)
+                      const unit = r.metaUnit || r.meta_unit || 'min'
+                      const currentDue = r.dueDate ? new Date(r.dueDate) : new Date()
+                      const nextDue = computeNextDueDate(currentDue, timeVal, unit)
+
+                      if (nextCount >= reps) {
+                        // final repetition -> mark completed using existing flow
+                        await updateActivityCompletion(id, true)
+                        try { toast.success('Meta concluída') } catch (_) {}
+                      } else {
+                        // persist updated count and schedule next occurrence
+                        const payload = { metaCompletedCount: nextCount, dueDate: nextDue, overdueEmailCount: 0, lastOverdueEmailAt: null, reminderSentAt: null }
+                        try {
+                          const res = await updateTodo(id, payload)
+                          if (res && (res.status === 200 || res.ok)) {
+                            try { toast.info(`Progresso: ${progress}%`) } catch (_) {}
+                            const t = await fetchTodos()
+                            setTodos(Array.isArray(t) ? t : [])
+                          } else {
+                            try { toast.error('Falha ao atualizar meta') } catch (_) {}
+                          }
+                        } catch (e) {
+                          console.error(e)
+                          try { toast.error('Erro ao atualizar meta') } catch (_) {}
+                        }
+                      }
+                    } catch (e) {
+                      console.error(e)
+                      try { toast.error('Erro ao processar meta') } catch (_) {}
+                    } finally {
+                      setMetaProcessingIds(prev => { const copy = new Set(prev); copy.delete(id); return copy })
+                    }
+                  }
                   // if server created a new recurring occurrence, insert it into state so UI updates immediately
                   if (body && body.newTodo && body.newTodo._id) {
                     setTodos(prev => {
@@ -218,7 +342,10 @@ export default function Atividades() {
         }
       } catch (_) {}
 
-      arr.unshift({ id: activity._id, title: activity.title, description: activity.description || '', completedAt: new Date().toISOString(), cardId, cardTitle, cardColor, recurring: !!activity.recurring, recoverable: (typeof activity.recoverable !== 'undefined') ? !!activity.recoverable : !activity.recurring })
+      arr.unshift({ id: activity._id, title: activity.title, description: activity.description || '', completedAt: new Date().toISOString(), // when snapshot was recorded locally
+        // include original createdAt when available so recovered todos can be restored to original schedule
+        createdAt: activity.createdAt || activity.completedAt || null,
+        cardId, cardTitle, cardColor, recurring: !!activity.recurring, recoverable: (typeof activity.recoverable !== 'undefined') ? !!activity.recoverable : !activity.recurring })
       // keep reasonable length
       if (arr.length > 200) arr = arr.slice(0, 200)
       localStorage.setItem(key, JSON.stringify(arr))
@@ -232,16 +359,22 @@ export default function Atividades() {
         const server = await fetchCompletedActivities()
         if (server && Array.isArray(server)) {
           const list = server.map(it => ({
-              id: it.originalId || it.id || it._id,
-              title: it.title || '',
-              description: it.description || '',
-              completedAt: it.completedAt ? (new Date(it.completedAt)).toISOString() : new Date().toISOString(),
-              cardId: it.cardId || null,
-              cardTitle: it.cardTitle || null,
-              cardColor: it.cardColor || null,
-              recurring: !!it.recurring,
-              recoverable: (typeof it.recoverable !== 'undefined') ? !!it.recoverable : !it.recurring
-            }))
+                id: it.originalId || it.id || it._id,
+                title: it.title || '',
+                description: it.description || '',
+                completedAt: it.completedAt ? (new Date(it.completedAt)).toISOString() : new Date().toISOString(),
+                // include the original creation timestamp when available
+                createdAt: it.createdAt ? (new Date(it.createdAt)).toISOString() : null,
+                cardId: it.cardId || null,
+                cardTitle: it.cardTitle || null,
+                cardColor: it.cardColor || null,
+                recurring: !!it.recurring,
+                // propagate meta info when present
+                meta: !!it.meta,
+                metaReps: it.metaReps || it.meta_reps || null,
+                metaCompletedCount: typeof it.metaCompletedCount !== 'undefined' ? it.metaCompletedCount : (typeof it.metaCompleted !== 'undefined' ? it.metaCompleted : 0),
+                recoverable: (typeof it.recoverable !== 'undefined') ? !!it.recoverable : !it.recurring
+              }))
           const totalPages = Math.max(1, Math.ceil(list.length / completedPageSize))
           const clamped = Math.min(Math.max(1, page), totalPages)
           setCompletedActivities(list)
@@ -350,7 +483,26 @@ export default function Atividades() {
       await new Promise(resolve => setTimeout(resolve, 360))
 
       // attempt to mark the original todo as not completed and ensure parentId is set
-      const res = await updateTodo(id, { completed: false, parentId: cardId })
+      // prefer using metadata from the completed snapshot when available so
+      // recovery works immediately after completion (no page refresh needed)
+      let payload = { completed: false, parentId: cardId }
+      try {
+        // If the server-provided snapshot includes meta info, reset the meta counter
+        // and use the original creation date as dueDate. Otherwise, try to
+        // inspect the in-memory `todos` list.
+        if (record && (record.meta || record.metaReps || (typeof record.metaCompletedCount !== 'undefined'))) {
+          payload.metaCompletedCount = 0
+          // use snapshot.createdAt when present, otherwise fallback to now
+          payload.dueDate = record.createdAt || (new Date()).toISOString()
+        } else {
+          const orig = todos && Array.isArray(todos) ? todos.find(t => String(t._id) === String(id)) : null
+          if (orig && orig.meta) {
+            payload.metaCompletedCount = 0
+            payload.dueDate = orig.createdAt ? new Date(orig.createdAt).toISOString() : (new Date()).toISOString()
+          }
+        }
+      } catch (_) {}
+      const res = await updateTodo(id, payload)
       if (res && (res.status === 200 || res.ok)) {
         try {
           // animate re-entry into todos list
@@ -748,6 +900,16 @@ export default function Atividades() {
       toast.error('Para lembretes, selecione uma data/hora')
       return
     }
+    // If activity is a meta, validate meta fields
+    if (meta && (!metaTime || metaTime <= 0 || !metaReps || metaReps <= 0)) {
+      toast.error('Para metas, informe tempo e número de repetições válidos')
+      return
+    }
+    // If activity is a meta, a due date is required
+    if (meta && (!dueDate || String(dueDate).trim() === '')) {
+      toast.error('Para metas, selecione uma data/hora de entrega')
+      return
+    }
     // If there are cards, a card selection is required
     if (cards && cards.length > 0 && (!selectedCardId || String(selectedCardId).trim() === '')) {
       toast.error('Selecione um cartão para a atividade')
@@ -755,6 +917,13 @@ export default function Atividades() {
     }
     try {
       const payload = { title, name, recurring, weekdays, dueDate: dueDate ? dueDate : null, reminder, reminderDate: reminder ? (dueDate ? dueDate : null) : null }
+      if (meta) {
+        payload.meta = true
+        payload.metaTime = Number(metaTime) || 1
+        payload.metaUnit = metaUnit || 'min'
+        payload.metaReps = Number(metaReps) || 1
+        payload.metaCompletedCount = 0
+      }
       // if a card is selected, attach its id as parentId and also set name to card title for legacy matching
       if (selectedCardId) {
         payload.parentId = selectedCardId
@@ -897,6 +1066,10 @@ export default function Atividades() {
                   <input type="checkbox" checked={reminder} onChange={e => { const val = e.target.checked; setReminder(val); if (val) setRecurring(false); }} />
                   <span>Lembrete</span>
                 </label>
+                <label className="checkbox-left">
+                  <input type="checkbox" checked={meta} onChange={e => { const val = e.target.checked; setMeta(val); if (val) { setRecurring(false); setReminder(false); } }} />
+                  <span>Meta</span>
+                </label>
                 {recurring && (
                   <div className="weekday-group">
                     {['seg','ter','qua','qui','sex','sab','dom'].map(d => (
@@ -904,6 +1077,22 @@ export default function Atividades() {
                         <input type="checkbox" checked={weekdays.includes(d)} onChange={() => toggleWeekday(d)} /> {d}
                       </label>
                     ))}
+                  </div>
+                )}
+                {meta && (
+                  <div className="meta-controls" style={{ marginTop: 8, width: '100%' }}>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <input className="meta-time-input" type="number" min="1" value={metaTime} onChange={e => setMetaTime(Math.max(1, Number(e.target.value || 1)))} />
+                      <select className="meta-unit-select" value={metaUnit} onChange={e => setMetaUnit(e.target.value)}>
+                        <option value="min">Minuto(s)</option>
+                        <option value="hour">Hora(s)</option>
+                        <option value="day">Dia(s)</option>
+                      </select>
+                    </div>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <label style={{ fontSize: 13 }}>Repetições</label>
+                      <input className="meta-reps-input" type="number" min="1" value={metaReps} onChange={e => setMetaReps(Math.max(1, Number(e.target.value || 1)))} />
+                    </div>
                   </div>
                 )}
                 {/* hide weekdays and related controls when a reminder is selected */}
@@ -1124,12 +1313,19 @@ export default function Atividades() {
                         <li key={r._id} className={"activity-item" + (isExiting ? ' exit' : '') + (isCompleting ? ' completed-exit' : '') + (isDeleting ? ' deleting-exit' : '') + (enterRight ? ' enter-right' : (entering ? ' animate-in' : ''))} style={{ padding: 10, borderRadius: 8, background: 'rgba(0,0,0,0.03)' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
                               <div className="activity-col-checkbox" style={{ flex: '0 0 36px', display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
-                              <input
+                                <input
                                 type="checkbox"
                                 aria-label={r.reminder ? `Lembrete: não é possível marcar como concluída` : `Marcar ${r.title} como concluída`}
-                                checked={!!r.completed || optimisticCompletedIds.has(r._id)}
-                                disabled={isExiting || isPending || !!r.reminder}
-                                onChange={e => { if (!r.reminder) updateActivityCompletion(r._id, e.target.checked); }}
+                                checked={((!!r.completed || optimisticCompletedIds.has(r._id)) && !r.meta) || (r.meta && metaProcessingIds.has(String(r._id)))}
+                                disabled={isExiting || isPending || !!r.reminder || metaProcessingIds.has(String(r._id))}
+                                onChange={e => {
+                                  if (r.meta) {
+                                    // meta flow
+                                    handleMetaTick(r, e.target.checked)
+                                    return
+                                  }
+                                  if (!r.reminder) updateActivityCompletion(r._id, e.target.checked)
+                                }}
                               />
                             </div>
 
@@ -1157,7 +1353,24 @@ export default function Atividades() {
                                 return (
                                   <>
                                     <div className="activity-bottom muted" style={{ fontSize: 13, display: hideMeta ? 'none' : undefined }}>{displayDate ? displayDate.toLocaleString() : ''}</div>
-                                    <div className="muted" style={{ fontSize: 13, display: hideMeta ? 'none' : undefined }}>{r.description || ''}</div>
+                                          <div className="muted" style={{ fontSize: 13, display: hideMeta ? 'none' : undefined }}>{r.description || ''}</div>
+                                          {r.meta && (
+                                            <div style={{ marginTop: 8 }}>
+                                              {(() => {
+                                                const done = Number(r.metaCompletedCount || r.metaCompleted || 0)
+                                                const total = Number(r.metaReps || r.meta_reps || r.metaRepetitions || 1)
+                                                const pct = Math.min(100, Math.round((done / Math.max(1, total)) * 100))
+                                                return (
+                                                  <div>
+                                                    <div style={{ height: 8, background: 'rgba(0,0,0,0.08)', borderRadius: 6, overflow: 'hidden' }}>
+                                                      <div style={{ width: `${pct}%`, height: '100%', background: 'linear-gradient(90deg,var(--card-urgency-color,#2ca02c), rgba(0,0,0,0.1))' }} />
+                                                    </div>
+                                                    <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>{done} / {total} — {pct}%</div>
+                                                  </div>
+                                                )
+                                              })()}
+                                            </div>
+                                          )}
                                   </>
                                 )
                               })()}

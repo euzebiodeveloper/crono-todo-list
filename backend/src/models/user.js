@@ -17,6 +17,12 @@ const TodoSubSchema = new mongoose.Schema({
   reminderSentAt: { type: Date, default: null },
   weekdays: { type: [String], default: [] },
   dueDate: { type: Date },
+  // meta-type tasks support (goal with repeated intervals)
+  meta: { type: Boolean, default: false },
+  metaTime: { type: Number, default: 1 },
+  metaUnit: { type: String, default: 'min' },
+  metaReps: { type: Number, default: 1 },
+  metaCompletedCount: { type: Number, default: 0 },
   // tracking for overdue notification emails on embedded todos
   overdueEmailCount: { type: Number, default: 0 },
   lastOverdueEmailAt: { type: Date, default: null },

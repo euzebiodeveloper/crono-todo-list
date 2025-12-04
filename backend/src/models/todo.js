@@ -13,6 +13,12 @@ const TodoSchema = new mongoose.Schema({
   reminder: { type: Boolean, default: false },
   // when the reminder should happen
   reminderDate: { type: Date },
+  // meta-type tasks (user-defined goal composed of repeated intervals)
+  meta: { type: Boolean, default: false },
+  metaTime: { type: Number, default: 1 },
+  metaUnit: { type: String, default: 'min' },
+  metaReps: { type: Number, default: 1 },
+  metaCompletedCount: { type: Number, default: 0 },
   // when the reminder email was sent (used to avoid duplicate sends)
   reminderSentAt: { type: Date, default: null },
   weekdays: { type: [String], default: [] }, // e.g. ['mon','wed']
