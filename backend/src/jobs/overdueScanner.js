@@ -12,6 +12,19 @@ function pickQuote() {
   return quotes[idx];
 }
 
+function formatDateBrazil(date) {
+  if (!date) return 'Sem data';
+  return new Date(date).toLocaleString('pt-BR', { 
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+}
+
 function weekdayStringToNumber(s) {
   if (!s) return null
   const map = { dom:0, seg:1, ter:2, qua:3, qui:4, sex:5, sab:6 }
@@ -56,7 +69,7 @@ async function processTodoItem(todo) {
     }
 
     const subject = todo.reminder ? `Lembrete: ${todo.title || todo.name || 'Atividade'}` : `Atividade expirada: ${todo.title || todo.name || 'Atividade'}`;
-    const dueDateStr = todo.dueDate ? new Date(todo.dueDate).toLocaleString() : 'Sem data';
+    const dueDateStr = formatDateBrazil(todo.dueDate);
     const quote = pickQuote();
     const recurringNote = todo.recurring ? '<p><strong>Esta é uma atividade recorrente.</strong></p>' : '';
     const intro = todo.reminder ? '<p>Este é um lembrete sobre sua atividade.</p>' : '<p>Sua atividade está expirada.</p>';
@@ -164,7 +177,7 @@ async function processEmbeddedTodo(user, todo, userDoc) {
     }
 
     const subject = todo.reminder ? `Lembrete: ${todo.title || todo.name || 'Atividade'}` : `Atividade expirada: ${todo.title || todo.name || 'Atividade'}`;
-    const dueDateStr = todo.dueDate ? new Date(todo.dueDate).toLocaleString() : 'Sem data';
+    const dueDateStr = formatDateBrazil(todo.dueDate);
     const quote = pickQuote();
     const recurringNote = todo.recurring ? '<p><strong>Esta é uma atividade recorrente.</strong></p>' : '';
     const intro = todo.reminder ? '<p>Este é um lembrete sobre sua atividade.</p>' : '<p>Sua atividade está expirada.</p>';
