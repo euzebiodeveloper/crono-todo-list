@@ -15,16 +15,25 @@ jobs:
       - name: Verificar atividades vencidas
         run: |
           echo "Iniciando verificação de atividades vencidas..."
+          echo "[DEBUG] URL Base: ${{ secrets.API_BASE_URL }}"
+          echo "[DEBUG] CRON_SECRET configurado: ${{ secrets.CRON_SECRET != '' && 'SIM' || 'NÃO' }}"
+          echo "[DEBUG] URL Completa: ${{ secrets.API_BASE_URL }}/notifications/check-overdue"
           
-          # Faz requisição POST para o backend
-          http_code=$(curl -X POST \
+          # Faz requisição POST para o backend e captura resposta
+          response=$(curl -X POST \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            -w "%{http_code}" \
-            -s -o /dev/null \
+            -w "\n%{http_code}" \
+            -s \
             ${{ secrets.API_BASE_URL }}/notifications/check-overdue)
           
-          echo "Status HTTP: $http_code"
+          # Extrai o código HTTP (última linha)
+          http_code=$(echo "$response" | tail -n1)
+          # Extrai o corpo da resposta (tudo exceto última linha)
+          body=$(echo "$response" | sed '$d')
+          
+          echo "[DEBUG] Status HTTP: $http_code"
+          echo "[DEBUG] Resposta do servidor: $body"
           
           # Verifica se foi bem-sucedido
           if [ "$http_code" -eq 200 ]; then
