@@ -1363,8 +1363,8 @@ export default function Atividades() {
                                                 const pct = Math.min(100, Math.round((done / Math.max(1, total)) * 100))
                                                 return (
                                                   <div>
-                                                    <div style={{ height: 8, background: 'rgba(0,0,0,0.08)', borderRadius: 6, overflow: 'hidden' }}>
-                                                      <div style={{ width: `${pct}%`, height: '100%', background: 'linear-gradient(90deg,var(--card-urgency-color,#2ca02c), rgba(0,0,0,0.1))' }} />
+                                                    <div className="meta-progress" style={{ height: 8, background: 'rgba(0,0,0,0.08)', borderRadius: 6, overflow: 'hidden' }}>
+                                                      <div className="meta-progress-fill" style={{ width: `${pct}%`, height: '100%', background: 'linear-gradient(90deg,var(--card-urgency-color,#2ca02c), rgba(0,0,0,0.1))' }} />
                                                     </div>
                                                     <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>{done} / {total} — {pct}%</div>
                                                   </div>

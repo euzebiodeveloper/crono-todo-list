@@ -5,6 +5,7 @@ const cors = require('cors');
 
 const todosRouter = require('./src/routes/todos');
 const authRouter = require('./src/routes/auth');
+const notificationsRouter = require('./src/routes/notifications');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -14,6 +15,7 @@ app.use(express.json());
 
 app.use('/api/todos', todosRouter);
 app.use('/api/auth', authRouter);
+app.use('/api/notifications', notificationsRouter);
 
 app.get('/', (req, res) => res.send('Crono Todo List API'));
 
@@ -54,13 +56,17 @@ async function start() {
 
     await mongoose.connect(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true });
 
-    // start background jobs
-    try {
-      const overdueScanner = require('./src/jobs/overdueScanner');
-      overdueScanner.start();
-    } catch (err) {
-      console.error('Failed to start overdueScanner job:', err);
-    }
+    // O scanner automático foi desabilitado - agora usa GitHub Actions
+    // que chama /api/notifications/check-overdue a cada 10 minutos
+    // Para testar localmente, você pode chamar manualmente a rota POST /api/notifications/check-overdue
+    
+    // Caso queira reativar o scanner automático (não recomendado), descomente abaixo:
+    // try {
+    //   const overdueScanner = require('./src/jobs/overdueScanner');
+    //   overdueScanner.start();
+    // } catch (err) {
+    //   console.error('Failed to start overdueScanner job:', err);
+    // }
 
     app.listen(PORT, () => { });
   } catch (err) {
