@@ -1,42 +1,42 @@
-name: Verificar Atividades Vencidas
+# name: Verificar Atividades Vencidas
 
-on:
-  schedule:
-    # Executa a cada 10 minutos
-    - cron: '*/10 * * * *'
-  # Permite execução manual via interface do GitHub
-  workflow_dispatch:
+# on:
+#   schedule:
+#     # Executa a cada 10 minutos
+#     - cron: '*/10 * * * *'
+#   # Permite execução manual via interface do GitHub
+#   workflow_dispatch:
 
-jobs:
-  check-overdue:
-    runs-on: ubuntu-latest
+# jobs:
+#   check-overdue:
+#     runs-on: ubuntu-latest
     
-    steps:
-      - name: Verificar atividades vencidas
-        run: |
-          echo "Iniciando verificação de atividades vencidas..."
+#     steps:
+#       - name: Verificar atividades vencidas
+#         run: |
+#           echo "Iniciando verificação de atividades vencidas..."
           
-          # Faz requisição POST para o backend
-          http_code=$(curl -X POST \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            -w "%{http_code}" \
-            -s -o /dev/null \
-            ${{ secrets.API_BASE_URL }}/notifications/check-overdue)
+#           # Faz requisição POST para o backend
+#           http_code=$(curl -X POST \
+#             -H "Content-Type: application/json" \
+#             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+#             -w "%{http_code}" \
+#             -s -o /dev/null \
+#             ${{ secrets.API_BASE_URL }}/notifications/check-overdue)
           
-          echo "Status HTTP: $http_code"
+#           echo "Status HTTP: $http_code"
           
-          # Verifica se foi bem-sucedido
-          if [ "$http_code" -eq 200 ]; then
-            echo "✓ Verificação concluída com sucesso!"
-            exit 0
-          else
-            echo "✗ Erro na verificação (HTTP $http_code)"
-            exit 1
-          fi
+#           # Verifica se foi bem-sucedido
+#           if [ "$http_code" -eq 200 ]; then
+#             echo "✓ Verificação concluída com sucesso!"
+#             exit 0
+#           else
+#             echo "✗ Erro na verificação (HTTP $http_code)"
+#             exit 1
+#           fi
 
-      - name: Notificar falha
-        if: failure()
-        run: |
-          echo "A verificação de atividades vencidas falhou."
-          echo "Verifique os logs acima para mais detalhes."
+#       - name: Notificar falha
+#         if: failure()
+#         run: |
+#           echo "A verificação de atividades vencidas falhou."
+#           echo "Verifique os logs acima para mais detalhes."
