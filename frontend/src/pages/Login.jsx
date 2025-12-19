@@ -12,6 +12,7 @@ export default function Login({ onAuth }) {
 
   async function handleSubmit(e) {
     e.preventDefault()
+    if (loading) return;
     setLoading(true)
     try {
       const res = await loginUser({ email, password })

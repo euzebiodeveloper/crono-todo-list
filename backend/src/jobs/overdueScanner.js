@@ -139,17 +139,11 @@ async function processTodoItem(todo) {
         return;
       }
 
-      // reset for next occurrence: compute next due date respecting `weekdays` if present
-      let nextDue = null
-      if (Array.isArray(todo.weekdays) && todo.weekdays.length > 0) {
-        nextDue = getNextDueForWeekdays(todo.dueDate || new Date(), todo.weekdays)
-      }
-      if (!nextDue) {
-        nextDue = todo.dueDate ? new Date(todo.dueDate) : new Date()
-        nextDue.setDate(nextDue.getDate() + 1)
-      }
+      // DO NOT auto-advance the date - keep it at current dueDate until user completes it
+      // Just increment the counter and update last sent timestamp
       await Todo.findByIdAndUpdate(todo._id, {
-        $set: { dueDate: nextDue, overdueEmailCount: 0, lastOverdueEmailAt: null }
+        $inc: { overdueEmailCount: 1 },
+        $set: { lastOverdueEmailAt: new Date() }
       });
       return;
     }
@@ -204,20 +198,12 @@ async function processEmbeddedTodo(user, todo, userDoc) {
         return;
       }
 
-      // advance dueDate respecting weekdays if present, otherwise +1 day
-      let nextDue = null
-      if (Array.isArray(todo.weekdays) && todo.weekdays.length > 0) {
-        nextDue = getNextDueForWeekdays(todo.dueDate || new Date(), todo.weekdays)
-      }
-      if (!nextDue) {
-        nextDue = todo.dueDate ? new Date(todo.dueDate) : new Date()
-        nextDue.setDate(nextDue.getDate() + 1)
-      }
+      // DO NOT auto-advance the date - keep it at current dueDate until user completes it
+      // Just increment the counter and update last sent timestamp
       const sub = userDoc.todos.id(todo._id);
       if (sub) {
-        sub.dueDate = nextDue;
-        sub.overdueEmailCount = 0;
-        sub.lastOverdueEmailAt = null;
+        sub.overdueEmailCount = (sub.overdueEmailCount || 0) + 1;
+        sub.lastOverdueEmailAt = new Date();
       }
       await userDoc.save();
       return;

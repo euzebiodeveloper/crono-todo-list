@@ -8,6 +8,7 @@ export default function Register({ onAuth }) {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [name, setName] = useState('')
+  const [loading, setLoading] = useState(false)
   
   const navigate = useNavigate()
   function translateField(key) {
@@ -34,6 +35,7 @@ export default function Register({ onAuth }) {
 
   async function handleSubmit(e) {
     e.preventDefault()
+    if (loading) return;
 
     // Client-side validation: ensure required fields are filled
     const missing = []
@@ -74,6 +76,7 @@ export default function Register({ onAuth }) {
       return
     }
 
+    setLoading(true)
     try {
       const res = await registerUser({ name, email, password })
       if (res.user && res.token) {
@@ -98,6 +101,8 @@ export default function Register({ onAuth }) {
       }
     } catch (err) {
       toast.error('Erro na requisição')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -109,18 +114,18 @@ export default function Register({ onAuth }) {
           <p className="muted">Crie sua conta para salvar listas, histórico e acessar seus dados em qualquer lugar.</p>
           <form onSubmit={handleSubmit} className="auth-form" noValidate>
             <label className="visually-hidden" htmlFor="name">Nome</label>
-            <input id="name" placeholder="Nome" value={name} onChange={e => setName(e.target.value)} required minLength={2} />
+            <input id="name" placeholder="Nome" value={name} onChange={e => setName(e.target.value)} required minLength={2} disabled={loading} />
 
             <label className="visually-hidden" htmlFor="reg-email">Email</label>
-            <input id="reg-email" type="email" placeholder="email@example.com" value={email} onChange={e => setEmail(e.target.value)} required />
+            <input id="reg-email" type="email" placeholder="email@example.com" value={email} onChange={e => setEmail(e.target.value)} required disabled={loading} />
 
             <label className="visually-hidden" htmlFor="reg-password">Senha</label>
-            <input id="reg-password" type="password" placeholder="senha" value={password} onChange={e => setPassword(e.target.value)} required minLength={8} />
+            <input id="reg-password" type="password" placeholder="senha" value={password} onChange={e => setPassword(e.target.value)} required minLength={8} disabled={loading} />
 
             <label className="visually-hidden" htmlFor="reg-confirm-password">Confirmar senha</label>
-            <input id="reg-confirm-password" type="password" placeholder="confirmar senha" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required minLength={8} />
+            <input id="reg-confirm-password" type="password" placeholder="confirmar senha" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required minLength={8} disabled={loading} />
 
-            <button type="submit" className="btn">Criar conta</button>
+            <button type="submit" className="btn" disabled={loading}>{loading ? 'Criando conta...' : 'Criar conta'}</button>
           </form>
           
         </div>

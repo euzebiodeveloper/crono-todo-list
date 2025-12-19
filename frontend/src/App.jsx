@@ -36,7 +36,10 @@ export default function App() {
   // small component used inside the Router to logout and redirect home
   function LogoutButton() {
     const navigate = useNavigate()
+    const [loggingOut, setLoggingOut] = useState(false)
     function handleLogout() {
+      if (loggingOut) return;
+      setLoggingOut(true)
       clearAuthToken()
       setIsAuthenticated(false)
       setMenuOpen(false)
@@ -44,7 +47,7 @@ export default function App() {
       navigate('/')
     }
     return (
-      <button className="btn secondary" onClick={handleLogout}>
+      <button className="btn secondary" onClick={handleLogout} disabled={loggingOut}>
         Sair
       </button>
     )

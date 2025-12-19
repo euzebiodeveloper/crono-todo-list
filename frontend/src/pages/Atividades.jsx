@@ -53,6 +53,8 @@ export default function Atividades() {
   
   const [editingLoading, setEditingLoading] = useState(false)
   const [removingId, setRemovingId] = useState(null)
+  const [creatingCard, setCreatingCard] = useState(false)
+  const [creatingActivity, setCreatingActivity] = useState(false)
   const [viewCard, setViewCard] = useState(null)
   const [exitingIds, setExitingIds] = useState(new Set())
   const [pendingIds, setPendingIds] = useState(new Set())
@@ -881,6 +883,7 @@ export default function Atividades() {
 
   async function handleCreate(e) {
     e.preventDefault()
+    if (creatingActivity) return;
     if (!title) {
       toast.error('Preencha o título')
       return
@@ -915,6 +918,7 @@ export default function Atividades() {
       toast.error('Selecione um cartão para a atividade')
       return
     }
+    setCreatingActivity(true)
     try {
       const payload = { title, name, recurring, weekdays, dueDate: dueDate ? dueDate : null, reminder, reminderDate: reminder ? (dueDate ? dueDate : null) : null }
       if (meta) {
@@ -959,15 +963,19 @@ export default function Atividades() {
       }
     } catch (err) {
       toast.error('Erro na requisição')
+    } finally {
+      setCreatingActivity(false)
     }
   }
 
   async function handleCreateCard(e) {
     e.preventDefault()
+    if (creatingCard) return;
     if (!cardTitle) {
       toast.error('Preencha o título do cartão')
       return
     }
+    setCreatingCard(true)
     try {
       const payload = { title: cardTitle, description: cardDesc || '', name: '', recurring: false, weekdays: [], dueDate: null, color: cardColor }
       const old = todos || []
@@ -987,6 +995,8 @@ export default function Atividades() {
       }
     } catch (err) {
       toast.error('Erro na requisição')
+    } finally {
+      setCreatingCard(false)
     }
   }
 
@@ -1021,8 +1031,8 @@ export default function Atividades() {
           )}
           {showCardForm && (
             <form onSubmit={handleCreateCard} style={{ marginTop: 0 }} className="auth-form card-mini-form">
-              <input placeholder="Título do cartão" value={cardTitle} onChange={e => setCardTitle(e.target.value)} />
-              <textarea placeholder="Descrição (opcional)" value={cardDesc} onChange={e => setCardDesc(e.target.value)} rows={3} />
+              <input placeholder="Título do cartão" value={cardTitle} onChange={e => setCardTitle(e.target.value)} disabled={creatingCard} />
+              <textarea placeholder="Descrição (opcional)" value={cardDesc} onChange={e => setCardDesc(e.target.value)} rows={3} disabled={creatingCard} />
               <div style={{ marginTop: 8 }}>
                 <div style={{ fontWeight: 700, marginBottom: 6 }}>Cor do cartão</div>
                 <div className="color-palette" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -1032,8 +1042,8 @@ export default function Atividades() {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button className="btn" type="submit">Criar cartão</button>
-                <button type="button" className="btn secondary" onClick={() => setShowCardForm(false)}>Cancelar</button>
+                <button className="btn" type="submit" disabled={creatingCard}>{creatingCard ? 'Criando...' : 'Criar cartão'}</button>
+                <button type="button" className="btn secondary" onClick={() => setShowCardForm(false)} disabled={creatingCard}>Cancelar</button>
               </div>
               {/* card messages are shown via toasts now */}
             </form>
@@ -1101,10 +1111,10 @@ export default function Atividades() {
                 )}
               </div>
               <label className="due-label">Data e hora de entrega</label>
-              <input type="datetime-local" step="1" value={dueDate} onChange={e => setDueDate(e.target.value)} />
+              <input type="datetime-local" step="1" value={dueDate} onChange={e => setDueDate(e.target.value)} disabled={creatingActivity} />
               <div style={{ display: 'flex', gap: 8 }}>
-                <button className="btn" type="submit">Criar</button>
-                <button type="button" className="btn secondary" onClick={() => setShowForm(false)}>Cancelar</button>
+                <button className="btn" type="submit" disabled={creatingActivity}>{creatingActivity ? 'Criando...' : 'Criar'}</button>
+                <button type="button" className="btn secondary" onClick={() => setShowForm(false)} disabled={creatingActivity}>Cancelar</button>
               </div>
               {/* form messages are shown via toasts now */}
             </form>

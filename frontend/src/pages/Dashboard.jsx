@@ -9,12 +9,14 @@ export default function Dashboard({ onLogout }) {
   const [todos, setTodos] = useState([])
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState(null)
+  const [loggingOut, setLoggingOut] = useState(false)
 
   // reset password form
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [resetMsg, setResetMsg] = useState(null)
+  const [resetting, setResetting] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -65,12 +67,15 @@ export default function Dashboard({ onLogout }) {
   }
 
   function handleLogout() {
+    if (loggingOut) return;
+    setLoggingOut(true)
     if (onLogout) onLogout()
     navigate('/')
   }
 
   async function handleReset(e) {
     e.preventDefault()
+    if (resetting) return;
     setResetMsg(null)
     // client-side validation
     if (!currentPassword || !newPassword || !confirmPassword) {
@@ -83,6 +88,7 @@ export default function Dashboard({ onLogout }) {
       toast.error('A nova senha e a confirmação não coincidem')
       return
     }
+    setResetting(true)
     try {
       const res = await resetPassword({ currentPassword, newPassword })
       if (res && res.ok) {
@@ -104,6 +110,8 @@ export default function Dashboard({ onLogout }) {
     } catch (err) {
       setResetMsg('Erro na solicitação')
       toast.error('Erro na solicitação')
+    } finally {
+      setResetting(false)
     }
   }
 
@@ -112,7 +120,7 @@ export default function Dashboard({ onLogout }) {
       <div className="section-inner">
         <div className="dashboard-header">
           <h2>Dashboard</h2>
-          <button className="btn secondary" onClick={handleLogout}>Sair</button>
+          <button className="btn secondary" onClick={handleLogout} disabled={loggingOut}>Sair</button>
         </div>
         {loading && <p className="muted">Carregando...</p>}
         {err && <p className="message">{err}</p>}
@@ -128,10 +136,10 @@ export default function Dashboard({ onLogout }) {
         <div className="card" style={{ marginBottom: 18 }}>
           <h4>Resetar senha</h4>
           <form onSubmit={handleReset} className="auth-form">
-            <input type="password" placeholder="Senha atual" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} />
-            <input type="password" placeholder="Nova senha" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
-            <input type="password" placeholder="Confirmar nova senha" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
-            <button className="btn" type="submit">Atualizar senha</button>
+            <input type="password" placeholder="Senha atual" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} disabled={resetting} />
+            <input type="password" placeholder="Nova senha" value={newPassword} onChange={e => setNewPassword(e.target.value)} disabled={resetting} />
+            <input type="password" placeholder="Confirmar nova senha" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} disabled={resetting} />
+            <button className="btn" type="submit" disabled={resetting}>{resetting ? 'Atualizando...' : 'Atualizar senha'}</button>
           </form>
         </div>
 

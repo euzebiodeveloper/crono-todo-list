@@ -226,6 +226,17 @@ input, textarea {
 	width: 100%;
 }
 
+.auth-section .auth-card .auth-form .btn[disabled],
+.auth-section .auth-card .auth-form .btn:disabled {
+	cursor: not-allowed !important;
+	background: #a0a0a0 !important;
+	color: #d0d0d0 !important;
+	box-shadow: none !important;
+	transform: none !important;
+	opacity: 0.6;
+	pointer-events: none;
+}
+
 /* auth form visuals (only textual inputs) */
 .auth-form input:not([type="checkbox"]):not([type="radio"]) {
 	display: block;
@@ -238,6 +249,18 @@ input, textarea {
 }
 
 .auth-form .btn { width: 100%; padding: 12px 14px; }
+
+/* Estado desabilitado dos botões de auth */
+.auth-form .btn[disabled],
+.auth-form .btn:disabled {
+	cursor: not-allowed !important;
+	background: #a0a0a0 !important;
+	color: #d0d0d0 !important;
+	box-shadow: none !important;
+	transform: none !important;
+	opacity: 0.6;
+	pointer-events: none;
+}
 
 /* focus style for auth inputs (accessible but subtle) */
 .auth-form input:focus {
@@ -389,7 +412,23 @@ input, button { font-size: 16px; }
 }
 
 
-.btn { display: inline-block; padding: 10px 16px; border-radius: 8px; background: var(--accent); color: #fff; text-decoration: none; font-weight: 600; transition: transform .12s ease, box-shadow .12s ease; }
+.btn { display: inline-block; padding: 10px 16px; border-radius: 8px; background: var(--accent); color: #fff; text-decoration: none; font-weight: 600; transition: transform .12s ease, box-shadow .12s ease; border: none; cursor: pointer; }
+.btn[disabled],
+.btn:disabled {
+	cursor: not-allowed !important;
+	background: #a0a0a0 !important;
+	color: #d0d0d0 !important;
+	box-shadow: none !important;
+	transform: none !important;
+	opacity: 0.6;
+	pointer-events: none;
+}
+.btn[disabled]:hover,
+.btn:disabled:hover {
+	background: #a0a0a0 !important;
+	transform: none !important;
+	box-shadow: none !important;
+}
 .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; padding: 20px; }
 
 nav a {

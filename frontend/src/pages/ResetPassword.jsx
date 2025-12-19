@@ -46,6 +46,7 @@ export default function ResetPassword() {
 
   async function handleSubmit(e) {
     e.preventDefault()
+    if (submitting) return;
     if (!newPassword) return toast.error('Informe a nova senha')
     if (!isStrong) return toast.error('Senha fraca: mínimo 8 caracteres, incluindo letras maiúsculas, minúsculas e caracteres especiais')
     if (!passwordsMatch) return toast.error('As senhas não coincidem')
@@ -78,9 +79,7 @@ export default function ResetPassword() {
           <form onSubmit={handleSubmit} className="auth-form">
             <input type="password" placeholder="Nova senha" value={newPassword} onChange={e => { setNewPassword(e.target.value) }} disabled={submitting} />
             <input type="password" placeholder="Confirmar nova senha" value={confirm} onChange={e => setConfirm(e.target.value)} disabled={submitting} />
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn" type="submit" disabled={submitting || !newPassword}>{submitting ? 'Enviando...' : 'Atualizar senha'}</button>
-            </div>
+            <button className="btn" type="submit" disabled={submitting || !newPassword}>{submitting ? 'Enviando...' : 'Atualizar senha'}</button>
           </form>
         </div>
       </div>
